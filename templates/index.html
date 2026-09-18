@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CorkJobHunter</title>
+<style>
+:root{
+  --bg:#0f1420; --panel:#171e2e; --panel2:#1e2740; --border:#2a3550;
+  --text:#e8edf7; --muted:#93a0b8; --accent:#4f8cff; --accent2:#2dd4a7;
+  --red:#ff6b6b; --amber:#ffb454; --purple:#a78bfa;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+header{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;align-items:center;background:linear-gradient(180deg,#141b2c,#0f1420)}
+header h1{font-size:20px;letter-spacing:.3px}
+header h1 span{color:var(--accent)}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.chip{background:var(--panel2);border:1px solid var(--border);border-radius:999px;padding:4px 12px;font-size:12.5px;color:var(--muted)}
+.chip b{color:var(--text)}
+.chip.hot b{color:var(--accent2)}
+nav{display:flex;gap:4px;padding:10px 22px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
+nav button{background:none;border:none;color:var(--muted);padding:10px 16px;font-size:14.5px;cursor:pointer;border-bottom:2px solid transparent}
+nav button.active{color:var(--text);border-bottom-color:var(--accent)}
+main{padding:20px 22px;max-width:1150px;margin:0 auto}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+input[type=text],input[type=number],input[type=date],textarea,select{
+  background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:14px;font-family:inherit}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
+.btn{background:var(--accent);border:none;color:#fff;border-radius:8px;padding:9px 16px;font-size:14px;cursor:pointer;font-weight:600}
+.btn:hover{filter:brightness(1.12)}
+.btn.ghost{background:var(--panel2);border:1px solid var(--border);color:var(--text)}
+.btn.green{background:var(--accent2);color:#08302a}
+.btn.small{padding:5px 10px;font-size:12.5px;border-radius:6px}
+.btn:disabled{opacity:.5;cursor:wait}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+.job{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.job .info{flex:1;min-width:220px}
+.job h3{font-size:16px;margin-bottom:2px}
+.job .meta{color:var(--muted);font-size:13.5px}
+.badge{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;letter-spacing:.4px}
+.badge.new{background:#123c31;color:var(--accent2);border:1px solid #1d5c4a}
+.badge.src{background:var(--panel2);color:var(--muted);border:1px solid var(--border);font-weight:500;text-transform:uppercase;font-size:10px}
+.acts{display:flex;gap:8px;align-items:center}
+.pill{padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.pill.Saved{background:#2a3550;color:#aab7d0}.pill.Applied{background:#1c3a63;color:#7db4ff}
+.pill.Interview{background:#3b2d63;color:#c4b0ff}.pill.Offer{background:#123c31;color:#4ade9e}
+.pill.Rejected{background:#4a2230;color:#ff8fa0}.pill.Ghosted{background:#4a3a1e;color:#ffd08a}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:800px){.grid2{grid-template-columns:1fr}}
+label{display:block;font-size:12.5px;color:var(--muted);margin:10px 0 4px;font-weight:600}
+textarea{width:100%;resize:vertical}
+.score{font-size:34px;font-weight:800}
+.kw{display:inline-block;background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:12.5px;margin:3px 4px 0 0}
+.kw.good{border-color:#1d5c4a;color:var(--accent2)}.kw.bad{border-color:#5c1d2a;color:#ff9a9a}
+.muted{color:var(--muted)}
+.due{color:var(--red);font-weight:700;font-size:12px}
+.hidden{display:none}
+section{animation:fade .18s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
+.note{background:#1a2438;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;padding:10px 14px;font-size:13.5px;color:var(--muted);margin-bottom:16px}
+pre.letter{white-space:pre-wrap;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;font:13.5px/1.6 ui-monospace,Menlo,Consolas,monospace;max-height:480px;overflow:auto}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--muted);border-top-color:transparent;border-radius:50%;animation:sp 1s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎯 Cork<span>Job</span>Hunter</h1>
+  <div class="stats" id="stats"></div>
+</header>
+<nav id="nav">
+  <button data-tab="jobs" class="active">Jobs</button>
+  <button data-tab="tracker">Tracker</button>
+  <button data-tab="cv">CV Studio</button>
+  <button data-tab="settings">Settings</button>
+</nav>
+<main>
+
+<section id="tab-jobs">
+  <div class="note">Scanning <b>part-time jobs in Cork</b> (student-friendly searches: retail, hospitality, bar, warehouse…) every few hours from LinkedIn's public feed, which also carries Indeed/IrishJobs/company-site listings. Green <b>NEW</b> = found in the last 48h. Toggle part-time off in Settings to see everything.</div>
+  <div class="toolbar">
+    <input type="text" id="q" placeholder="Search title, company, location…" style="flex:1;min-width:200px">
+    <label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer"><input type="checkbox" id="newOnly"> New only</label>
+    <button class="btn ghost" id="scanBtn" onclick="scanNow()">⟳ Scan now</button>
+  </div>
+  <div id="jobList"><span class="muted">Loading…</span></div>
+</section>
+
+<section id="tab-tracker" class="hidden">
+  <div class="toolbar">
+    <span class="muted" id="trkCount"></span>
+    <button class="btn ghost" style="margin-left:auto" onclick="location='/api/export/tracker'">⬇ Export CSV</button>
+  </div>
+  <div id="trkList"></div>
+</section>
+
+<section id="tab-cv" class="hidden">
+  <div class="grid2">
+    <div class="card">
+      <h3 style="margin-bottom:4px">👤 Your profile</h3>
+      <span class="muted" style="font-size:13px">Goes on every tailored CV &amp; cover letter. Saved locally.</span>
+      <div class="grid2" style="gap:0 12px">
+        <div><label>Name</label><input type="text" id="p_name" style="width:100%"></div>
+        <div><label>Headline (e.g. UCC Student · Retail &amp; Hospitality)</label><input type="text" id="p_headline" style="width:100%"></div>
+        <div><label>Email</label><input type="text" id="p_email" style="width:100%"></div>
+        <div><label>Phone</label><input type="text" id="p_phone" style="width:100%"></div>
+        <div><label>Years of experience</label><input type="text" id="p_years_exp" style="width:100%"></div>
+        <div><label>Location</label><input type="text" id="p_location" style="width:100%" value="Cork, Ireland"></div>
+      </div>
+      <label>Why you want to work (optional, used in cover letters)</label>
+      <textarea id="p_why" rows="2"></textarea>
+      <div style="margin-top:12px"><button class="btn" onclick="saveProfile()">💾 Save profile</button> <span id="pSaved" class="muted" style="font-size:13px"></span></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:4px">📥 Master CV</h3>
+      <span class="muted" style="font-size:13px">Paste your existing CV once — we'll split it into sections you can edit. This master is then tailored per job.</span>
+      <label>Paste CV text (Word → copy all, or type it out)</label>
+      <textarea id="importText" rows="4" placeholder="Paste your current CV here…"></textarea>
+      <div style="margin-top:8px"><button class="btn ghost" onclick="importCV()">⚡ Import into sections below</button></div>
+      <label>Professional summary</label>
+      <textarea id="m_summary" rows="3"></textarea>
+      <label>Skills (comma separated)</label>
+      <input type="text" id="m_skills" style="width:100%" placeholder="customer service, cash handling, teamwork…">
+      <label>Availability (shown to employers — important for student jobs!)</label>
+      <input type="text" id="m_availability" style="width:100%" placeholder="Available evenings &amp; weekends, full-time in summer">
+      <div id="expWrap"></div>
+      <button class="btn ghost small" onclick="addExp()">＋ Add experience</button>
+      <div id="eduWrap" style="margin-top:8px"></div>
+      <button class="btn ghost small" onclick="addEdu()">＋ Add education</button>
+      <div style="margin-top:12px"><button class="btn" onclick="saveMaster()">💾 Save master CV</button> <span id="mSaved" class="muted" style="font-size:13px"></span></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3 style="margin-bottom:4px">🛠 Job toolbox — pick a job, get everything</h3>
+    <span class="muted" style="font-size:13px">Match analysis, tailored CV (Word download) and cover letter, all from your master CV.</span>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+      <select id="matchJob" style="flex:1;min-width:220px"></select>
+      <input type="text" id="matchSearch" placeholder="…or search all jobs, press Enter, click a result" style="flex:1;min-width:220px">
+    </div>
+    <div id="matchSearchResults"></div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" onclick="runMatch()">🔍 Analyze match</button>
+      <button class="btn green" onclick="buildCV()">📄 Build tailored CV</button>
+      <button class="btn ghost" onclick="genLetter()">✉️ Draft cover letter</button>
+    </div>
+    <div id="matchOut" style="margin-top:14px"></div>
+    <div id="cvOut" style="margin-top:14px"></div>
+    <div id="versionsWrap" style="margin-top:10px"></div>
+  </div>
+
+  <div id="letterWrap" class="card hidden" style="margin-top:14px">
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <h3 style="flex:1">✉️ Cover letter draft</h3>
+      <button class="btn ghost small" onclick="copyLetter()">📋 Copy</button>
+      <button class="btn ghost small" onclick="downloadLetter()">⬇ Download .txt</button>
+    </div>
+    <pre class="letter" id="letterOut"></pre>
+    <span class="muted" style="font-size:12.5px">Edit before sending! Swap in a real achievement or two where possible.</span>
+  </div>
+</section>
+
+<section id="tab-settings" class="hidden">
+  <div class="card" style="max-width:640px">
+    <h3>⚙️ Scan settings</h3>
+    <label>Location (LinkedIn format)</label>
+    <input type="text" id="s_location" style="width:100%">
+    <label>Keyword searches (comma separated — leave one empty entry to scan ALL jobs)</label>
+    <input type="text" id="s_searches" style="width:100%" placeholder=", part time, retail, bar">
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="s_part_time" style="width:16px;height:16px"> Part-time jobs only (recommended for students)</label>
+    <label>Auto-scan every (hours)</label>
+    <input type="number" id="s_scan_hours" min="1" max="168" style="width:120px">
+    <h3 style="margin-top:20px">Adzuna API (optional, free)</h3>
+    <span class="muted" style="font-size:13px">Adds a second job source. Get free keys in ~2 min at <a href="https://developer.adzuna.com" target="_blank" style="color:var(--accent)">developer.adzuna.com</a>.</span>
+    <label>App ID</label><input type="text" id="s_adzuna_id" style="width:100%">
+    <label>App Key</label><input type="text" id="s_adzuna_key" style="width:100%">
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" onclick="saveSettings()">Save settings</button>
+      <button class="btn ghost" onclick="location='/api/export/jobs'">⬇ Export all jobs CSV</button>
+      <button class="btn ghost" style="border-color:#5c1d2a" onclick="if(confirm('Delete all scanned jobs except tracked ones?'))clearJobs()">🗑 Clear old jobs</button>
+    </div>
+    <div id="sSaved" class="muted" style="margin-top:8px;font-size:13px"></div>
+  </div>
+</section>
+
+</main>
+<script>
+const $=s=>document.querySelector(s);
+let CURRENT_LETTER="";
+
+// tabs
+document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("#nav button").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
+  ["jobs","tracker","cv","settings"].forEach(t=>$("#tab-"+t).classList.toggle("hidden",t!==b.dataset.tab));
+  if(b.dataset.tab==="tracker")loadTracker();
+  if(b.dataset.tab==="cv")loadCvTab();
+  if(b.dataset.tab==="settings")loadSettings();
+});
+
+async function api(path,opts){const r=await fetch(path,opts);return r.json();}
+function esc(s){return (s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+async function loadStats(){
+  const s=await api("/api/stats");
+  $("#stats").innerHTML=
+    `<span class="chip"><b>${s.total}</b> jobs</span>`+
+    `<span class="chip hot"><b>${s.new}</b> new (48h)</span>`+
+    `<span class="chip"><b>${s.applied}</b> applied</span>`+
+    `<span class="chip"><b>${s.interviews}</b> interviews</span>`+
+    (s.followups?`<span class="chip" style="border-color:#5c1d2a"><b style="color:var(--red)">${s.followups}</b> follow-ups due</span>`:"")+
+    `<span class="chip" id="scanChip">${s.running?'<span class="spin"></span> scanning…':s.last_run?"last scan "+timeAgo(s.last_run):"never scanned"}</span>`;
+}
+function timeAgo(iso){const m=(Date.now()-new Date(iso))/60000;if(m<60)return Math.round(m)+"m ago";const h=m/60;if(h<24)return Math.round(h)+"h ago";return Math.round(h/24)+"d ago";}
+
+let ALL_JOBS=[];
+async function loadJobs(){
+  const q=$("#q").value, no=$("#newOnly").checked;
+  const jobs=await api(`/api/jobs?q=${encodeURIComponent(q)}&new_only=${no?1:0}`);
+  ALL_JOBS=jobs;
+  $("#jobList").innerHTML=jobs.length?jobs.map(jobCard).join(""):`<div class="card muted">No jobs match. Try clearing filters or hit “Scan now”.</div>`;
+}
+function jobCard(j){
+  return `<div class="card job"><div class="info">
+    <h3>${esc(j.title)} ${j.is_new?'<span class="badge new">NEW</span>':""}</h3>
+    <div class="meta">${esc(j.company)} · ${esc(j.location)} · posted ${esc(j.posted||"?")} <span class="badge src">${esc(j.source)}</span></div>
+  </div><div class="acts">
+    <a class="btn ghost small" href="${esc(j.url)}" target="_blank" rel="noopener">Open ↗</a>
+    <button class="btn small" onclick="track(${j.id},this)">☆ Track</button>
+  </div></div>`;
+}
+async function track(id,btn){const r=await api("/api/tracker",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({job_id:id})});
+  if(btn){btn.textContent=r.already?"✓ Tracked":"★ Tracked";btn.className="btn small green";} loadStats();}
+async function scanNow(){const b=$("#scanBtn");b.disabled=true;b.innerHTML='<span class="spin"></span> Scanning…';
+  await api("/api/scan",{method:"POST"});
+  const poll=setInterval(async()=>{const s=await api("/api/stats");
+    if(!s.running){clearInterval(poll);b.disabled=false;b.textContent="⟳ Scan now";loadStats();loadJobs();
+      if(s.error)alert("Scan error: "+s.error);}},2500);}
+
+async function loadTracker(){
+  const t=await api("/api/tracker");
+  $("#trkCount").textContent=t.length?`${t.length} tracked job${t.length>1?"s":""}`:"Nothing tracked yet — hit ☆ Track on any job.";
+  const order=["Interview","Applied","Saved","Offer","Ghosted","Rejected"];
+  t.sort((a,b)=>order.indexOf(a.status)-order.indexOf(b.status));
+  $("#trkList").innerHTML=t.map(r=>`<div class="card">
+    <div class="job"><div class="info">
+      <h3>${esc(r.title)} <span class="pill ${r.status}">${r.status}</span> ${r.followup_due?'<span class="due">⏰ FOLLOW UP DUE</span>':""}</h3>
+      <div class="meta">${esc(r.company)} · <a href="${esc(r.url)}" target="_blank" style="color:var(--accent)">job link ↗</a>${r.cv_version?` · <span class="badge src">CV: ${esc(r.cv_version)}</span>`:""}</div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:13px" class="muted">
+        <span>Status <select onchange="patch(${r.id},{status:this.value});loadTracker()" style="padding:4px 8px;font-size:13px">
+          ${["Saved","Applied","Interview","Offer","Rejected","Ghosted"].map(s=>`<option ${s===r.status?"selected":""}>${s}</option>`).join("")}</select></span>
+        <span>Applied <input type="date" value="${esc(r.applied_date||"")}" onchange="patch(${r.id},{applied_date:this.value})" style="padding:4px 8px;font-size:13px"></span>
+        <span>Follow-up <input type="date" value="${esc(r.followup_date||"")}" onchange="patch(${r.id},{followup_date:this.value})" style="padding:4px 8px;font-size:13px"></span>
+      </div>
+      <textarea rows="2" placeholder="Notes (interview times, recruiter name…)" onchange="patch(${r.id},{notes:this.value})" style="width:100%;margin-top:8px;font-size:13px">${esc(r.notes)}</textarea>
+    </div><div class="acts" style="flex-direction:column">
+      <button class="btn ghost small" onclick="gotoMatch(${r.job_id})">🔍 Match</button>
+      <button class="btn ghost small" onclick="if(confirm('Remove from tracker?'))untrack(${r.id})">🗑</button>
+    </div></div></div>`).join("")||"";
+  loadStats();
+}
+async function patch(id,fields){await api("/api/tracker/"+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(fields)});loadStats();}
+async function untrack(id){await api("/api/tracker/"+id,{method:"DELETE"});loadTracker();}
+
+let MASTER={summary:"",skills:"",availability:"",experience:[],education:[]};
+async function loadCvTab(){
+  const p=await api("/api/profile");
+  ["name","headline","email","phone","years_exp","location","why"].forEach(k=>{const el=$("#p_"+k);if(el&&p[k]!==undefined)el.value=p[k];});
+  const m=await api("/api/cv");
+  if(m&&Object.keys(m).length)MASTER={summary:"",skills:"",availability:"",experience:[],education:[],...m};
+  renderMaster();
+  const t=await api("/api/tracker");
+  $("#matchJob").innerHTML='<option value="">— choose a tracked job —</option>'+t.map(r=>`<option value="${r.job_id}">${esc(r.title)} @ ${esc(r.company)}</option>`).join("");
+  loadVersions();
+}
+function renderMaster(){
+  $("#m_summary").value=MASTER.summary||"";
+  $("#m_skills").value=MASTER.skills||"";
+  $("#m_availability").value=MASTER.availability||"";
+  $("#expWrap").innerHTML='<label>Experience</label>'+MASTER.experience.map((e,i)=>`
+    <div class="card" style="background:var(--panel2);padding:10px;margin-top:6px">
+      <div style="display:flex;gap:8px"><input type="text" placeholder="Role" value="${esc(e.role||"")}" onchange="MASTER.experience[${i}].role=this.value" style="flex:1;padding:6px 10px;font-size:13px">
+      <button class="btn ghost small" onclick="MASTER.experience.splice(${i},1);renderMaster()">✕</button></div>
+      <div style="display:flex;gap:8px;margin-top:6px"><input type="text" placeholder="Company" value="${esc(e.org||"")}" onchange="MASTER.experience[${i}].org=this.value" style="flex:1;padding:6px 10px;font-size:13px">
+      <input type="text" placeholder="Dates (e.g. Jun 2025 – Present)" value="${esc(e.dates||"")}" onchange="MASTER.experience[${i}].dates=this.value" style="flex:1;padding:6px 10px;font-size:13px"></div>
+      <textarea rows="2" placeholder="Achievements/duties — one per line" onchange="MASTER.experience[${i}].bullets=this.value.split('\\n').filter(x=>x.trim())" style="margin-top:6px;font-size:13px">${(e.bullets||[]).join("\n")}</textarea>
+    </div>`).join("");
+  $("#eduWrap").innerHTML='<label>Education</label>'+MASTER.education.map((e,i)=>`
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <input type="text" placeholder="Award (e.g. BSc Computer Science)" value="${esc(e.award||"")}" onchange="MASTER.education[${i}].award=this.value" style="flex:2;padding:6px 10px;font-size:13px">
+      <input type="text" placeholder="School/College" value="${esc(e.org||"")}" onchange="MASTER.education[${i}].org=this.value" style="flex:1;padding:6px 10px;font-size:13px">
+      <input type="text" placeholder="Dates" value="${esc(e.dates||"")}" onchange="MASTER.education[${i}].dates=this.value" style="flex:1;padding:6px 10px;font-size:13px">
+      <button class="btn ghost small" onclick="MASTER.education.splice(${i},1);renderMaster()">✕</button>
+    </div>`).join("");
+  MASTER.summary=$("#m_summary").value;MASTER.skills=$("#m_skills").value;MASTER.availability=$("#m_availability").value;
+}
+function addExp(){collectMaster();MASTER.experience.push({role:"",org:"",dates:"",bullets:[]});renderMaster();}
+function addEdu(){collectMaster();MASTER.education.push({award:"",org:"",dates:""});renderMaster();}
+function collectMaster(){
+  MASTER.summary=$("#m_summary").value;MASTER.skills=$("#m_skills").value;MASTER.availability=$("#m_availability").value;
+  // textareas/inputs with onchange already write into MASTER
+}
+async function saveMaster(){
+  collectMaster();
+  await api("/api/cv",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(MASTER)});
+  $("#mSaved").textContent="Saved ✓";setTimeout(()=>$("#mSaved").textContent="",2000);
+}
+async function importCV(){
+  const text=$("#importText").value;
+  if(!text.trim()){alert("Paste your CV text first.");return;}
+  const parsed=await api("/api/cv/parse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text})});
+  MASTER={summary:parsed.summary||MASTER.summary,skills:parsed.skills||MASTER.skills,
+    availability:parsed.availability||MASTER.availability,
+    experience:(parsed.experience||[]).length?parsed.experience:MASTER.experience,
+    education:(parsed.education||[]).length?parsed.education:MASTER.education};
+  renderMaster();await saveMaster();
+  $("#importText").value="";
+  $("#mSaved").textContent="Imported & saved ✓ — check the sections, fix anything the parser missed.";
+}
+async function saveProfile(){
+  const body={};["name","headline","email","phone","years_exp","location","why"].forEach(k=>body[k]=$("#p_"+k).value);
+  await api("/api/profile",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  $("#pSaved").textContent="Saved ✓";setTimeout(()=>$("#pSaved").textContent="",2000);
+}
+function gotoMatch(jobId){document.querySelector('#nav button[data-tab="cv"]').click();
+  setTimeout(()=>{$("#matchJob").value=jobId;runMatch();},300);}
+async function runMatch(){
+  const id=$("#matchJob").value||SELECTED_JOB;
+  if(!id){alert("Pick a job first (track one, or search all jobs in the box).");return;}
+  $("#matchOut").innerHTML='<span class="spin"></span> <span class="muted">Fetching job description &amp; analyzing… (first time takes a few seconds)</span>';
+  const r=await api("/api/match",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({job_id:+id})});
+  if(r.error){$("#matchOut").innerHTML=`<div class="card" style="border-color:#5c1d2a">⚠️ ${esc(r.error)}</div>`;return;}
+  const a=r.analysis,col=a.score>=70?"var(--accent2)":a.score>=45?"var(--amber)":"var(--red)";
+  $("#matchOut").innerHTML=`<div class="card">
+    <div style="display:flex;align-items:center;gap:14px"><div class="score" style="color:${col}">${a.score}%</div>
+    <div><b>${esc(r.job.title)}</b><br><span class="muted" style="font-size:13px">${esc(r.job.company)} — ${a.verdict}</span></div></div>
+    <label style="margin-top:12px">✅ Your CV already covers</label><div>${a.matched.map(k=>`<span class="kw good">${esc(k)}</span>`).join("")||'<span class="muted">nothing detected — paste your CV text!</span>'}</div>
+    <label>❗ Missing from your CV (add the true ones!)</label><div>${a.missing.map(k=>`<span class="kw bad">${esc(k)}</span>`).join("")||'<span class="muted">all covered 🎉</span>'}</div>
+    ${a.job_extra_terms.length?`<label>Other words this job cares about</label><div>${a.job_extra_terms.map(k=>`<span class="kw">${esc(k)}</span>`).join("")}</div>`:""}
+  </div>`;
+}
+async function genLetter(){
+  const id=$("#matchJob").value||SELECTED_JOB;
+  if(!id){alert("Pick a job first.");return;}
+  await saveProfile();
+  const r=await api("/api/cover-letter",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({job_id:+id})});
+  if(r.error){alert(r.error);return;}
+  CURRENT_LETTER=r.letter;
+  $("#letterWrap").classList.remove("hidden");
+  $("#letterOut").textContent=r.letter;
+  $("#letterWrap").scrollIntoView({behavior:"smooth"});
+}
+async function buildCV(){
+  const id=$("#matchJob").value||SELECTED_JOB;
+  if(!id){alert("Pick a job first (from the dropdown or the search box).");return;}
+  await saveMaster();await saveProfile();
+  $("#cvOut").innerHTML='<span class="spin"></span> <span class="muted">Fetching job description &amp; tailoring your CV…</span>';
+  const r=await api("/api/cv/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({job_id:+id})});
+  if(r.error){$("#cvOut").innerHTML=`<div class="card" style="border-color:#5c1d2a">⚠️ ${esc(r.error)}</div>`;return;}
+  const a=r.analysis,col=a.score>=70?"var(--accent2)":a.score>=45?"var(--amber)":"var(--red)";
+  $("#cvOut").innerHTML=`<div class="card" style="border-color:var(--accent)">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+      <h3 style="flex:1">📄 Tailored CV — ${esc(r.cv.job_title||"")} @ ${esc(r.cv.company||"")} <span class="badge new">match ${a.score}%</span></h3>
+      <a class="btn small" href="/api/cv/download/${r.version_id}?fmt=docx">⬇ Word (.docx)</a>
+      <button class="btn ghost small" onclick="location='/api/cv/download/${r.version_id}?fmt=txt'">⬇ .txt</button>
+    </div>
+    ${r.cv.suggestions&&r.cv.suggestions.length?`<div style="margin-bottom:10px"><span class="muted" style="font-size:13px">💡 This job wants these too — add them to your master CV <b>only if true for you</b>, then rebuild:</span><br>${r.cv.suggestions.map(k=>`<span class="kw bad">${esc(k)}</span>`).join("")}</div>`:""}
+    <div style="background:#fdfdfc;color:#1a1a1a;border-radius:10px;padding:22px 26px;max-height:560px;overflow:auto">${r.html.replace(/#4f8cff/g,"#2b5cb8").replace(/#93a0b8/g,"#667").replace(/#2a3550/g,"#ccd")}</div>
+    <span class="muted" style="font-size:12.5px">Preview shows the generated file. Skills &amp; bullets are re-ordered for this job — nothing is invented. Always proofread before sending.</span>
+  </div>`;
+  loadVersions();loadTracker();
+}
+async function loadVersions(){
+  const v=await api("/api/cv/versions");
+  if(!v.length){$("#versionsWrap").innerHTML="";return;}
+  $("#versionsWrap").innerHTML=`<label style="margin:0 0 4px">Generated CV versions</label>`+v.map(x=>
+    `<div style="display:flex;gap:8px;align-items:center;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)">
+      <span style="flex:1">${esc(x.name)} <span class="muted">· ${esc(x.title||"")}</span></span>
+      <a class="btn ghost small" href="/api/cv/download/${x.id}?fmt=docx">.docx</a>
+      <a class="btn ghost small" href="/api/cv/download/${x.id}?fmt=txt">.txt</a>
+    </div>`).join("");
+}
+function copyLetter(){navigator.clipboard.writeText(CURRENT_LETTER).then(()=>alert("Copied!"));}
+function downloadLetter(){const b=new Blob([CURRENT_LETTER],{type:"text/plain"});const a=document.createElement("a");
+  a.href=URL.createObjectURL(b);a.download="cover-letter.txt";a.click();}
+
+// search across all jobs for matching
+let SELECTED_JOB="";
+$("#matchSearch").addEventListener("keydown",async e=>{
+  if(e.key!=="Enter")return;
+  const jobs=await api("/api/jobs?q="+encodeURIComponent(e.target.value));
+  SELECTED_JOB="";
+  const box=$("#matchSearchResults");
+  box.innerHTML=jobs.slice(0,8).map(j=>
+    `<div class="card pick" data-id="${j.id}" style="padding:8px 12px;margin-top:6px;cursor:pointer">
+      <b style="font-size:13.5px">${esc(j.title)}</b><div class="muted" style="font-size:12.5px">${esc(j.company)} · ${esc(j.location)}</div></div>`).join("")||'<span class="muted" style="font-size:13px">no results</span>';
+  box.querySelectorAll(".pick").forEach(el=>el.onclick=()=>{
+    box.querySelectorAll(".pick").forEach(c=>c.style.borderColor="var(--border)");
+    el.style.borderColor="var(--accent)";
+    SELECTED_JOB=el.dataset.id;
+    $("#matchJob").value="";
+  });
+});
+
+async function loadSettings(){
+  const s=await api("/api/settings");
+  $("#s_location").value=s.location||"";
+  $("#s_searches").value=JSON.parse(s.searches||'[""]').join(", ");
+  $("#s_scan_hours").value=s.scan_hours||6;
+  $("#s_part_time").checked=s.part_time==="1";
+  $("#s_adzuna_id").value=s.adzuna_id||"";
+  $("#s_adzuna_key").value=s.adzuna_key||"";
+}
+async function saveSettings(){
+  const searches=$("#s_searches").value.split(",").map(s=>s.trim());
+  const body={location:$("#s_location").value,searches:JSON.stringify(searches.length?searches:[""]),
+    scan_hours:$("#s_scan_hours").value||"6",part_time:$("#s_part_time").checked?"1":"0",
+    adzuna_id:$("#s_adzuna_id").value.trim(),adzuna_key:$("#s_adzuna_key").value.trim()};
+  await api("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  $("#sSaved").textContent="Saved ✓ — hit “Scan now” on the Jobs tab to apply immediately.";
+  setTimeout(()=>$("#sSaved").textContent="",4000);
+}
+async function clearJobs(){await api("/api/jobs/clear",{method:"POST"});loadStats();loadJobs();}
+
+$("#q").addEventListener("input",()=>{clearTimeout(window._qt);window._qt=setTimeout(loadJobs,300);});
+$("#newOnly").addEventListener("change",loadJobs);
+loadStats();loadJobs();setInterval(loadStats,15000);
+</script>
+</body>
+</html>
