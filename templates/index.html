@@ -47,7 +47,23 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 .pill.Interview{background:#3b2d63;color:#c4b0ff}.pill.Offer{background:#123c31;color:#4ade9e}
 .pill.Rejected{background:#4a2230;color:#ff8fa0}.pill.Ghosted{background:#4a3a1e;color:#ffd08a}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-@media(max-width:800px){.grid2{grid-template-columns:1fr}}
+.paper{background:#fdfdfc;color:#1a1a1a;border-radius:10px;padding:22px 26px;max-height:560px;overflow:auto}
+.mrow{display:flex;gap:8px;flex-wrap:wrap}
+.mrow input{flex:1;min-width:110px}
+@media(max-width:800px){
+  .grid2{grid-template-columns:1fr}
+  nav{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  nav::-webkit-scrollbar{display:none}
+  nav button{white-space:nowrap;padding:10px 14px}
+  main{padding:14px}
+  header{padding:14px 16px}
+  input[type=text],input[type=number],input[type=date],select,textarea{font-size:16px}
+  .card{padding:12px 14px}
+  .btn.small{padding:9px 14px}
+  .job h3{font-size:15.5px;overflow-wrap:anywhere}
+  .paper{padding:14px}
+  .stats .chip{font-size:11.5px;padding:3px 10px}
+}
 label{display:block;font-size:12.5px;color:var(--muted);margin:10px 0 4px;font-weight:600}
 textarea{width:100%;resize:vertical}
 .score{font-size:34px;font-weight:800}
@@ -82,6 +98,7 @@ pre.letter{white-space:pre-wrap;background:var(--bg);border:1px solid var(--bord
   <div class="toolbar">
     <input type="text" id="q" placeholder="Search title, company, location…" style="flex:1;min-width:200px">
     <label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer"><input type="checkbox" id="newOnly"> New only</label>
+    <label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer"><input type="checkbox" id="corkOnly" checked> Cork area</label>
     <button class="btn ghost" id="scanBtn" onclick="scanNow()">⟳ Scan now</button>
   </div>
   <div id="jobList"><span class="muted">Loading…</span></div>
@@ -217,7 +234,8 @@ function timeAgo(iso){const m=(Date.now()-new Date(iso))/60000;if(m<60)return Ma
 let ALL_JOBS=[];
 async function loadJobs(){
   const q=$("#q").value, no=$("#newOnly").checked;
-  const jobs=await api(`/api/jobs?q=${encodeURIComponent(q)}&new_only=${no?1:0}`);
+  let jobs=await api(`/api/jobs?q=${encodeURIComponent(q)}&new_only=${no?1:0}`);
+  if($("#corkOnly").checked)jobs=jobs.filter(j=>!j.location||/cork/i.test(j.location));
   ALL_JOBS=jobs;
   $("#jobList").innerHTML=jobs.length?jobs.map(jobCard).join(""):`<div class="card muted">No jobs match. Try clearing filters or hit “Scan now”.</div>`;
 }
@@ -282,12 +300,12 @@ function renderMaster(){
     <div class="card" style="background:var(--panel2);padding:10px;margin-top:6px">
       <div style="display:flex;gap:8px"><input type="text" placeholder="Role" value="${esc(e.role||"")}" onchange="MASTER.experience[${i}].role=this.value" style="flex:1;padding:6px 10px;font-size:13px">
       <button class="btn ghost small" onclick="MASTER.experience.splice(${i},1);renderMaster()">✕</button></div>
-      <div style="display:flex;gap:8px;margin-top:6px"><input type="text" placeholder="Company" value="${esc(e.org||"")}" onchange="MASTER.experience[${i}].org=this.value" style="flex:1;padding:6px 10px;font-size:13px">
-      <input type="text" placeholder="Dates (e.g. Jun 2025 – Present)" value="${esc(e.dates||"")}" onchange="MASTER.experience[${i}].dates=this.value" style="flex:1;padding:6px 10px;font-size:13px"></div>
+      <div class="mrow" style="margin-top:6px"><input type="text" placeholder="Company" value="${esc(e.org||"")}" onchange="MASTER.experience[${i}].org=this.value" style="padding:6px 10px;font-size:13px">
+      <input type="text" placeholder="Dates (e.g. Jun 2025 – Present)" value="${esc(e.dates||"")}" onchange="MASTER.experience[${i}].dates=this.value" style="padding:6px 10px;font-size:13px"></div>
       <textarea rows="2" placeholder="Achievements/duties — one per line" onchange="MASTER.experience[${i}].bullets=this.value.split('\\n').filter(x=>x.trim())" style="margin-top:6px;font-size:13px">${(e.bullets||[]).join("\n")}</textarea>
     </div>`).join("");
   $("#eduWrap").innerHTML='<label>Education</label>'+MASTER.education.map((e,i)=>`
-    <div style="display:flex;gap:8px;margin-top:6px">
+    <div class="mrow" style="margin-top:6px">
       <input type="text" placeholder="Award (e.g. BSc Computer Science)" value="${esc(e.award||"")}" onchange="MASTER.education[${i}].award=this.value" style="flex:2;padding:6px 10px;font-size:13px">
       <input type="text" placeholder="School/College" value="${esc(e.org||"")}" onchange="MASTER.education[${i}].org=this.value" style="flex:1;padding:6px 10px;font-size:13px">
       <input type="text" placeholder="Dates" value="${esc(e.dates||"")}" onchange="MASTER.education[${i}].dates=this.value" style="flex:1;padding:6px 10px;font-size:13px">
@@ -366,7 +384,7 @@ async function buildCV(){
       <button class="btn ghost small" onclick="location='/api/cv/download/${r.version_id}?fmt=txt'">⬇ .txt</button>
     </div>
     ${r.cv.suggestions&&r.cv.suggestions.length?`<div style="margin-bottom:10px"><span class="muted" style="font-size:13px">💡 This job wants these too — add them to your master CV <b>only if true for you</b>, then rebuild:</span><br>${r.cv.suggestions.map(k=>`<span class="kw bad">${esc(k)}</span>`).join("")}</div>`:""}
-    <div style="background:#fdfdfc;color:#1a1a1a;border-radius:10px;padding:22px 26px;max-height:560px;overflow:auto">${r.html.replace(/#4f8cff/g,"#2b5cb8").replace(/#93a0b8/g,"#667").replace(/#2a3550/g,"#ccd")}</div>
+    <div class="paper">${r.html.replace(/#4f8cff/g,"#2b5cb8").replace(/#93a0b8/g,"#667").replace(/#2a3550/g,"#ccd")}</div>
     <span class="muted" style="font-size:12.5px">Preview shows the generated file. Skills &amp; bullets are re-ordered for this job — nothing is invented. Always proofread before sending.</span>
   </div>`;
   loadVersions();loadTracker();
@@ -425,6 +443,7 @@ async function clearJobs(){await api("/api/jobs/clear",{method:"POST"});loadStat
 
 $("#q").addEventListener("input",()=>{clearTimeout(window._qt);window._qt=setTimeout(loadJobs,300);});
 $("#newOnly").addEventListener("change",loadJobs);
+$("#corkOnly").addEventListener("change",loadJobs);
 loadStats();loadJobs();setInterval(loadStats,15000);
 </script>
 </body>
