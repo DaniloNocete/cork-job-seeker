@@ -1,5 +1,6 @@
 """CorkJobHunter — auto job scanning, tracker and CV assistant for Cork."""
 import json
+import os
 import re
 import sqlite3
 import threading
@@ -13,10 +14,23 @@ import cvmatch
 import cvbuilder
 
 app = Flask(__name__)
-DB = "/home/user/jobhunter/data.db"
+DB = os.environ.get("JOBHUNTER_DB", os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.db"))
+AUTH_PASSWORD = os.environ.get("AUTH_PASSWORD", "")   # set this when deploying publicly!
 LOCK = threading.Lock()
 
 SCAN_STATE = {"running": False, "last_run": None, "last_count": 0, "error": None}
+
+
+@app.before_request
+def require_auth():
+    if not AUTH_PASSWORD:
+        return
+    if request.path == "/healthz":
+        return
+    auth = request.authorization
+    if not auth or auth.password != AUTH_PASSWORD:
+        return Response("Authentication required.", 401,
+                        {"WWW-Authenticate": 'Basic realm="CorkJobHunter"'})
 
 
 def db():
