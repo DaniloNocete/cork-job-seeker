@@ -1,5 +1,12 @@
 # 🎯 CorkJobHunter
 
+**📲 LIVE APP → https://danilonocete.github.io/cork-job-seeker/**
+*(open on your phone → Share/⋮ menu → “Add to Home Screen” to use it like an app)*
+
+Other useful links:
+- 🔎 Instant job scan: [Actions → scan-jobs → Run workflow](https://github.com/DaniloNocete/cork-job-seeker/actions/workflows/scan.yml)
+- 📄 Live jobs data: [jobs.json](https://danilonocete.github.io/cork-job-seeker/jobs.json)
+
 Personal job-hunting automation for students & part-time job seekers in Cork, Ireland.
 
 - **Auto job scanner** — pulls part-time/student-friendly Cork jobs from LinkedIn's public
