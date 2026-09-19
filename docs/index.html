@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f1420">
+<title>CorkJobHunter</title>
+<style>
+:root{--bg:#0f1420;--panel:#171e2e;--panel2:#1e2740;--border:#2a3550;--text:#e8edf7;--muted:#93a0b8;--accent:#4f8cff;--accent2:#2dd4a7;--red:#ff6b6b;--amber:#ffb454}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+header h1{font-size:19px}.hl{color:var(--accent)}
+.stats{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.chip{background:var(--panel2);border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:11.5px;color:var(--muted)}.chip b{color:var(--text)}.chip.hot b{color:var(--accent2)}
+nav{display:flex;gap:2px;padding:8px 12px 0;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{background:none;border:none;color:var(--muted);padding:10px 14px;font-size:14.5px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+nav button.active{color:var(--text);border-bottom-color:var(--accent)}
+main{padding:14px;max-width:1000px;margin:0 auto}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+input[type=text],input[type=date],textarea,select{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:16px;font-family:inherit;width:100%}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
+.btn{background:var(--accent);border:none;color:#fff;border-radius:8px;padding:9px 16px;font-size:14px;cursor:pointer;font-weight:600}
+.btn.ghost{background:var(--panel2);border:1px solid var(--border);color:var(--text)}
+.btn.green{background:var(--accent2);color:#08302a}
+.btn.small{padding:8px 12px;font-size:12.5px;border-radius:6px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.job{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.job .info{flex:1;min-width:200px}
+.job h3{font-size:15.5px;overflow-wrap:anywhere}
+.job .meta{color:var(--muted);font-size:13px}
+.badge{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.new{background:#123c31;color:var(--accent2);border:1px solid #1d5c4a}
+.badge.src{background:var(--panel2);color:var(--muted);border:1px solid var(--border);font-size:10px;text-transform:uppercase}
+.acts{display:flex;gap:8px;align-items:center}
+.pill{padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.pill.Saved{background:#2a3550;color:#aab7d0}.pill.Applied{background:#1c3a63;color:#7db4ff}
+.pill.Interview{background:#3b2d63;color:#c4b0ff}.pill.Offer{background:#123c31;color:#4ade9e}
+.pill.Rejected{background:#4a2230;color:#ff8fa0}.pill.Ghosted{background:#4a3a1e;color:#ffd08a}
+.grid2{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:860px){.grid2{grid-template-columns:1fr 1fr}main{padding:20px}}
+label{display:block;font-size:12.5px;color:var(--muted);margin:10px 0 4px;font-weight:600}
+textarea{resize:vertical}
+.score{font-size:32px;font-weight:800}
+.kw{display:inline-block;background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:12.5px;margin:3px 4px 0 0}
+.kw.good{border-color:#1d5c4a;color:var(--accent2)}.kw.bad{border-color:#5c1d2a;color:#ff9a9a}
+.muted{color:var(--muted)}.due{color:var(--red);font-weight:700;font-size:12px}
+.hidden{display:none}
+.note{background:#1a2438;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--muted);margin-bottom:14px}
+.note a{color:var(--accent)}
+pre.letter{white-space:pre-wrap;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace;max-height:440px;overflow:auto}
+.paper{background:#fdfdfc;color:#1a1a1a;border-radius:10px;padding:14px;max-height:520px;overflow:auto}
+.mrow{display:flex;gap:8px;flex-wrap:wrap}.mrow input{flex:1;min-width:110px}
+@media(min-width:860px){.paper{padding:22px 26px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎯 Cork<span class="hl">Job</span>Hunter</h1>
+  <div class="stats" id="stats"></div>
+</header>
+<nav id="nav">
+  <button data-tab="jobs" class="active">Jobs</button>
+  <button data-tab="tracker">Tracker</button>
+  <button data-tab="cv">CV Studio</button>
+  <button data-tab="help">Help</button>
+</nav>
+<main>
+<section id="tab-jobs">
+  <div class="note">Jobs refresh automatically every ~6h via GitHub Actions (<a href="https://github.com/DaniloNocete/cork-job-seeker/actions" target="_blank">run now ↗</a> for an instant scan). Your CV &amp; tracker stay private in this browser only.</div>
+  <div class="toolbar">
+    <input type="text" id="q" placeholder="Search title, company, location…" style="flex:1;min-width:160px">
+    <label style="display:flex;align-items:center;gap:6px;margin:0"><input type="checkbox" id="newOnly" style="width:16px;height:16px"> New</label>
+    <label style="display:flex;align-items:center;gap:6px;margin:0"><input type="checkbox" id="corkOnly" checked style="width:16px;height:16px"> Cork</label>
+    <button class="btn ghost small" onclick="loadJobs(true)">⟳</button>
+  </div>
+  <div id="jobList"><span class="muted">Loading jobs…</span></div>
+</section>
+
+<section id="tab-tracker" class="hidden">
+  <div class="toolbar"><span class="muted" id="trkCount"></span>
+    <button class="btn ghost small" style="margin-left:auto" onclick="exportTracker()">⬇ CSV</button></div>
+  <div id="trkList"></div>
+</section>
+
+<section id="tab-cv" class="hidden">
+  <div class="grid2">
+    <div class="card">
+      <h3>👤 Profile</h3>
+      <div class="grid2" style="gap:0 12px">
+        <div><label>Name</label><input type="text" id="p_name"></div>
+        <div><label>Headline</label><input type="text" id="p_headline" placeholder="UCC Student · Retail & Hospitality"></div>
+        <div><label>Email</label><input type="text" id="p_email"></div>
+        <div><label>Phone</label><input type="text" id="p_phone"></div>
+        <div><label>Location</label><input type="text" id="p_location" value="Cork, Ireland"></div>
+      </div>
+      <label>Why you want to work (optional, for cover letters)</label>
+      <textarea id="p_why" rows="2"></textarea>
+      <button class="btn small" style="margin-top:10px" onclick="saveProfile()">💾 Save</button> <span id="pSaved" class="muted" style="font-size:12px"></span>
+    </div>
+    <div class="card">
+      <h3>📥 Master CV</h3>
+      <label>Paste your CV once, then ⚡ Import</label>
+      <textarea id="importText" rows="4" placeholder="Paste your current CV here…"></textarea>
+      <button class="btn ghost small" style="margin-top:6px" onclick="importCV()">⚡ Import into sections</button>
+      <label>Summary</label><textarea id="m_summary" rows="3"></textarea>
+      <label>Skills (comma separated)</label><input type="text" id="m_skills">
+      <label>Availability</label><input type="text" id="m_availability" placeholder="Available evenings & weekends">
+      <div id="expWrap"></div>
+      <button class="btn ghost small" onclick="addExp()">＋ experience</button>
+      <div id="eduWrap"></div>
+      <button class="btn ghost small" onclick="addEdu()">＋ education</button>
+      <button class="btn small" style="margin-top:10px" onclick="saveMaster(true)">💾 Save master CV</button> <span id="mSaved" class="muted" style="font-size:12px"></span>
+    </div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <h3>🛠 Job toolbox</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <select id="matchJob" style="flex:1;min-width:180px"></select>
+      <input type="text" id="matchSearch" placeholder="search all jobs + Enter" style="flex:1;min-width:160px">
+    </div>
+    <div id="matchSearchResults"></div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn small" onclick="runMatch()">🔍 Match</button>
+      <button class="btn green small" onclick="buildCV()">📄 Build tailored CV</button>
+      <button class="btn ghost small" onclick="genLetter()">✉️ Cover letter</button>
+    </div>
+    <div id="matchOut" style="margin-top:12px"></div>
+    <div id="cvOut" style="margin-top:12px"></div>
+    <div id="versionsWrap"></div>
+  </div>
+  <div id="letterWrap" class="card hidden">
+    <div style="display:flex;gap:8px;margin-bottom:8px"><h3 style="flex:1">✉️ Cover letter</h3>
+      <button class="btn ghost small" onclick="copyLetter()">📋</button>
+      <button class="btn ghost small" onclick="dlText(CURRENT_LETTER,'cover-letter.txt')">⬇</button></div>
+    <pre class="letter" id="letterOut"></pre>
+  </div>
+</section>
+
+<section id="tab-help" class="hidden">
+  <div class="card">
+    <h3>📱 Use it like an app</h3>
+    <p class="muted" style="font-size:13.5px">On your phone: open this page in Safari/Chrome → Share / ⋮ menu → <b>Add to Home Screen</b>. It'll launch full-screen like a native app.</p>
+    <h3 style="margin-top:14px">🔒 Where your data lives</h3>
+    <p class="muted" style="font-size:13.5px">Profile, master CV, tracker and generated CVs are stored <b>only in this browser</b> (localStorage). The public repo contains job listings only — never your personal data. Moving to a new device? Export a backup below and import it there.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <button class="btn ghost small" onclick="backup()">⬇ Backup all my data</button>
+      <button class="btn ghost small" onclick="document.getElementById('restoreFile').click()">⬆ Restore backup</button>
+      <input type="file" id="restoreFile" accept=".json" class="hidden" onchange="restore(this)">
+      <button class="btn ghost small" style="border-color:#5c1d2a" onclick="if(confirm('Delete ALL local data (CV, tracker, versions)?')){localStorage.removeItem(KEY);location.reload();}">🗑 Erase</button>
+    </div>
+    <h3 style="margin-top:14px">⏱ Job refresh</h3>
+    <p class="muted" style="font-size:13.5px">A GitHub Action scans part-time Cork jobs every 6 hours and updates <code>jobs.json</code>. For an instant scan: repo → <b>Actions</b> tab → <b>scan-jobs</b> → <b>Run workflow</b>. Then hit ⟳ here.</p>
+  </div>
+</section>
+</main>
+<script>
+"use strict";
+const KEY="cjh_state_v1";
+let STATE=load()||{profile:{},master:{summary:"",skills:"",availability:"",experience:[],education:[]},tracker:[],versions:[]};
+let JOBS=[],META={},CURRENT_LETTER="",SELECTED_JOB="";
+function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
+function save(){localStorage.setItem(KEY,JSON.stringify(STATE))}
+const $=s=>document.querySelector(s);
+const esc=s=>(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("#nav button").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
+  ["jobs","tracker","cv","help"].forEach(t=>$("#tab-"+t).classList.toggle("hidden",t!==b.dataset.tab));
+  if(b.dataset.tab==="tracker")renderTracker();
+  if(b.dataset.tab==="cv")loadCvTab();
+});
+function timeAgo(iso){const m=(Date.now()-new Date(iso))/60000;if(m<60)return Math.round(m)+"m ago";const h=m/60;if(h<24)return Math.round(h)+"h ago";return Math.round(h/24)+"d ago";}
+function renderStats(){
+  const cutoff=Date.now()-48*3600*1000;
+  const nw=JOBS.filter(j=>new Date(j.first_seen).getTime()>=cutoff).length;
+  const ap=STATE.tracker.filter(t=>["Applied","Interview","Offer"].includes(t.status)).length;
+  const iv=STATE.tracker.filter(t=>["Interview","Offer"].includes(t.status)).length;
+  const today=new Date().toISOString().slice(0,10);
+  const fu=STATE.tracker.filter(t=>t.followup&&t.followup<=today&&!["Rejected","Offer"].includes(t.status)).length;
+  $("#stats").innerHTML=`<span class="chip"><b>${META.count||JOBS.length}</b> jobs</span><span class="chip hot"><b>${nw}</b> new</span><span class="chip"><b>${ap}</b> applied</span><span class="chip"><b>${iv}</b> interviews</span>${fu?`<span class="chip"><b style="color:var(--red)">${fu}</b> follow-up</span>`:""}<span class="chip">${META.generated?"scan "+timeAgo(META.generated):"no scan yet"}</span>`;
+}
+async function loadJobs(force){
+  try{
+    const r=await fetch("jobs.json"+(force?"?t="+Date.now():""),{cache:force?"no-store":"default"});
+    const d=await r.json();META=d.meta||{};JOBS=d.jobs||[];
+  }catch(e){$("#jobList").innerHTML='<div class="card">No jobs.json yet — the first GitHub Action scan may still be running. Check the Actions tab, then hit ⟳.</div>';return;}
+  renderStats();renderJobs();
+}
+function renderJobs(){
+  const q=$("#q").value.toLowerCase();
+  let jobs=JOBS;
+  if($("#corkOnly").checked)jobs=jobs.filter(j=>!j.location||/cork/i.test(j.location));
+  if($("#newOnly").checked){const c=Date.now()-48*3600*1000;jobs=jobs.filter(j=>new Date(j.first_seen).getTime()>=c);}
+  if(q)jobs=jobs.filter(j=>(j.title+" "+j.company+" "+j.location).toLowerCase().includes(q));
+  $("#jobList").innerHTML=jobs.slice(0,200).map(j=>`<div class="card job"><div class="info">
+    <h3>${esc(j.title)} ${isNew(j)?'<span class="badge new">NEW</span>':""}</h3>
+    <div class="meta">${esc(j.company)} · ${esc(j.location)} · ${esc(j.posted||"?")}</div></div>
+    <div class="acts"><a class="btn ghost small" href="${esc(j.url)}" target="_blank" rel="noopener">Open ↗</a>
+    <button class="btn small" onclick="track('${esc(j.id)}',this)">☆</button></div></div>`).join("")||'<div class="card muted">No matches.</div>';
+}
+const isNew=j=>new Date(j.first_seen).getTime()>=Date.now()-48*3600*1000;
+function track(id,btn){
+  if(STATE.tracker.some(t=>t.job===id)){if(btn){btn.textContent="✓";btn.className="btn small green";}return;}
+  STATE.tracker.push({job:id,status:"Saved",applied:"",followup:"",notes:"",cv_version:"",created:new Date().toISOString()});
+  save();if(btn){btn.textContent="★";btn.className="btn small green";}renderStats();
+}
+function jobById(id){return JOBS.find(j=>j.id===id);}
+function renderTracker(){
+  const order=["Interview","Applied","Saved","Offer","Ghosted","Rejected"];
+  const t=[...STATE.tracker].sort((a,b)=>order.indexOf(a.status)-order.indexOf(b.status));
+  const today=new Date().toISOString().slice(0,10);
+  $("#trkCount").textContent=t.length?t.length+" tracked":"Nothing tracked yet — hit ☆ on any job.";
+  $("#trkList").innerHTML=t.map((r,i)=>{const j=jobById(r.job)||{title:r.job,company:""};
+    const due=r.followup&&r.followup<=today&&!["Rejected","Offer"].includes(r.status);
+    return `<div class="card"><div class="job"><div class="info">
+    <h3>${esc(j.title)} <span class="pill ${r.status}">${r.status}</span> ${due?'<span class="due">⏰ FOLLOW UP</span>':""}</h3>
+    <div class="meta">${esc(j.company)}${j.url?` · <a href="${esc(j.url)}" target="_blank" style="color:var(--accent)">link ↗</a>`:""}${r.cv_version?` · <span class="badge src">CV: ${esc(r.cv_version)}</span>`:""}</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:12.5px" class="muted">
+      <span>Status <select onchange="trkSet(${i},'status',this.value)" style="width:auto;padding:4px 8px;font-size:13px">${["Saved","Applied","Interview","Offer","Rejected","Ghosted"].map(s=>`<option ${s===r.status?"selected":""}>${s}</option>`).join("")}</select></span>
+      <span>Applied <input type="date" value="${esc(r.applied||"")}" onchange="trkSet(${i},'applied',this.value)" style="width:auto;padding:4px 8px;font-size:13px"></span>
+      <span>Follow-up <input type="date" value="${esc(r.followup||"")}" onchange="trkSet(${i},'followup',this.value)" style="width:auto;padding:4px 8px;font-size:13px"></span>
+    </div>
+    <textarea rows="2" placeholder="Notes…" onchange="trkSet(${i},'notes',this.value)" style="margin-top:8px;font-size:13px">${esc(r.notes)}</textarea>
+    </div><div class="acts" style="flex-direction:column">
+    <button class="btn ghost small" onclick="gotoMatch('${esc(r.job)}')">🔍</button>
+    <button class="btn ghost small" onclick="if(confirm('Remove?')){STATE.tracker.splice(STATE.tracker.indexOf(STATE.tracker.find(t=>t.job==='${esc(r.job)}')),1);save();renderTracker();renderStats();}">🗑</button>
+    </div></div></div>`;}).join("");
+  renderStats();
+}
+function trkSet(i,k,v){STATE.tracker[i][k]=v;save();renderStats();}
+function exportTracker(){
+  const rows=[["title","company","status","applied","followup","notes"]];
+  STATE.tracker.forEach(r=>{const j=jobById(r.job)||{};rows.push([j.title,j.company,r.status,r.applied,r.followup,(r.notes||"").replace(/\n/g," ")]);});
+  dlText(rows.map(r=>r.map(c=>`"${String(c||"").replace(/"/g,'""')}"`).join(",")).join("\n"),"tracker.csv");
+}
+/* ---------- CV matching (JS port of the Python logic) ---------- */
+const STOP=new Set(("a an and are as at be but by for from has have if in into is it its not of on or our that the their them they this to was we will with you your more most other such can could may might must shall should would about across after again all also am any because been before being between both each few further get got her here him his how however just like made make many me my new now off once only out over per re said same she so some than then there these those through under until up upon us use used using very via want was were what when where which while who whom why within without work working years year role roles team teams ability able including include includes etc ie eg must-have nice-to-have strong excellent good great candidate candidates applicant applicants job jobs position positions company companies equal opportunity employer applicant tracking system").split(" "));
+const SKILLS=("python java javascript typescript c++ c# .net sql nosql html css react angular vue node.js django flask spring rest api apis git docker kubernetes aws azure gcp devops ci/cd linux agile scrum machine learning data analysis excel power bi tableau cybersecurity network helpdesk it support troubleshooting qa testing automation gmp glp validation cleanroom sop haccp iso 9001 lean six sigma 5s kaizen spc batch record deviation capa quality assurance quality control microbiology chemistry bioprocessing aseptic fpga cad solidworks plc maintenance electrical mechanical machining assembly production packaging forklift warehouse inventory logistics supply chain procurement shipping receiving picking packing customer service customer experience cash handling pos merchandising stock control barista bartender bar bar staff beverage food and beverage drinks hospitality guest guest service waiting waiter waiting staff server catering catering assistant kitchen kitchen porter food prep dishwasher food safety hygiene chef reception front desk housekeeping hotel retail sales up-selling till checkout cashier stocktake call centre complaint query resolution crm salesforce hubspot delivery delivery driver cleaner cleaning shop store supervisor bookkeeping payroll accounts payable accounts receivable invoicing sage quickbooks ms office word outlook data entry filing scheduling administration receptionist project management stakeholder reporting kpi budget forecasting compliance gdpr audit risk hr recruitment onboarding training coaching mentoring supervising team lead communication teamwork team player problem solving problem-solving attention to detail time management multitasking organisational organizational initiative adaptable flexible reliable punctual leadership negotiation presentation analytical critical thinking interpersonal empathy multitask fast-paced deadline targets driving licence driver's license full licence manual handling safepass first aid irish spanish french german polish portuguese multilingual").split(" ");
+const tok=t=>(t||"").toLowerCase().match(/[a-z][a-z0-9+#./-]{1,}/g)||[];
+const hit=(text,term)=>new RegExp("(?<![a-z])"+term.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"(?![a-z])","i").test(text||"");
+function extractTerms(text){
+  const low=(text||"").toLowerCase();
+  const skills=SKILLS.filter(s=>hit(low,s)).sort();
+  const freq={};tok(text).forEach(w=>{if(!STOP.has(w)&&w.length>2)freq[w]=(freq[w]||0)+1;});
+  const extra=Object.entries(freq).filter(([w,c])=>c>=2&&!skills.includes(w)).sort((a,b)=>b[1]-a[1]).slice(0,15).map(([w])=>w);
+  return{skills,extra};
+}
+function matchCv(cvText,jobText){
+  const{skills,extra}=extractTerms(jobText);
+  const matched=skills.filter(s=>hit(cvText,s)),missing=skills.filter(s=>!hit(cvText,s));
+  const jw=new Set(tok(jobText).filter(w=>!STOP.has(w)&&w.length>3));
+  const cw=new Set(tok(cvText));
+  let ov=0;jw.forEach(w=>{if(cw.has(w))ov++;});
+  const vocab=jw.size?ov/jw.size:0;
+  const sk=skills.length?matched.length/skills.length:0.5;
+  let score=Math.round(100*(0.75*sk+0.25*Math.min(vocab*1.6,1)));
+  score=Math.max(5,Math.min(99,score));
+  return{score,matched,missing,extra,verdict:score>=70?"Strong match — apply!":score>=45?"Decent match — tailor your CV first.":"Weak match — only apply if genuinely interested."};
+}
+function cvText(){
+  const m=STATE.master,p=STATE.profile;
+  if(!m.summary&&!m.skills&&!(m.experience||[]).length)return"";
+  return[m.summary,m.skills,m.availability,
+    ...(m.experience||[]).map(e=>[e.role,e.org,(e.bullets||[]).join(" ")].join(" ")),
+    ...(m.education||[]).map(e=>[e.award,e.org].join(" "))].filter(Boolean).join("\n");
+}
+function tailorCv(p,m,job,a){
+  const terms=[...a.matched,...a.missing,...a.extra];
+  let opener=`Motivated and reliable ${p.headline||"candidate"} applying for the ${job.title} position at ${job.company||"your company"}.`;
+  if(a.matched.length)opener+=` Brings hands-on strengths in ${a.matched.slice(0,4).join(", ")}.`;
+  if(m.availability)opener+=` ${m.availability.replace(/\.$/,"")}.`;
+  const kept=(m.summary||"").split(/(?<=[.!?])\s+/).filter(s=>s.trim()&&terms.some(t=>hit(s,t))).slice(0,2);
+  const mySkills=(m.skills||"").split(/[,;\n]/).map(s=>s.trim()).filter(Boolean);
+  const sm=mySkills.filter(s=>terms.some(t=>hit(s,t)));
+  const so=mySkills.filter(s=>!sm.includes(s));
+  const exp=(m.experience||[]).map(e=>{
+    const body=[e.role,e.org,(e.bullets||[]).join(" ")].join(" ");
+    const sc=terms.filter(t=>hit(body,t)).length;
+    return{...e,bullets:[...(e.bullets||[])].sort((x,y)=>terms.filter(t=>hit(y,t)).length-terms.filter(t=>hit(x,t)).length),_s:sc};
+  }).sort((x,y)=>y._s-x._s).map(({_s,...e})=>e);
+  const sugg=a.missing.filter(k=>!mySkills.join(" ").toLowerCase().includes(k)).slice(0,8);
+  return{name:p.name||"[Your Name]",contact:[p.phone,p.email,p.location||"Cork, Ireland"].filter(Boolean).join(" · "),
+    summary:[opener,...kept].join(" "),skills_matched:sm,skills_other:so,experience:exp,education:m.education||[],
+    suggestions:sugg,job_title:job.title,company:job.company||"",generated:new Date().toISOString().slice(0,10)};
+}
+function cvHtml(cv){
+  const sec=t=>`<h4 style="margin:12px 0 6px;font-size:11.5px;letter-spacing:1.2px;color:#2b5cb8;text-transform:uppercase;border-bottom:1px solid #ccd;padding-bottom:4px">${esc(t)}</h4>`;
+  let h=`<div style="text-align:center;margin-bottom:8px"><div style="font-size:19px;font-weight:800">${esc(cv.name)}</div><div style="font-size:12px;color:#667">${esc(cv.contact)}</div></div>`;
+  h+=sec("Profile")+`<p style="font-size:13px">${esc(cv.summary)}</p>`;
+  if(cv.skills_matched.length)h+=sec("Key skills for this role")+cv.skills_matched.map(s=>`<span class="kw good">${esc(s)}</span>`).join("");
+  if(cv.skills_other.length)h+=sec("Other skills")+cv.skills_other.map(s=>`<span class="kw">${esc(s)}</span>`).join("");
+  if(cv.experience.length){h+=sec("Experience");cv.experience.forEach(e=>{h+=`<div style="margin-bottom:8px"><b style="font-size:13px">${esc([e.role,e.org].filter(Boolean).join(" — "))}</b>${e.dates?` <span style="color:#667">(${esc(e.dates)})</span>`:""}${(e.bullets||[]).length?`<ul style="margin:4px 0 0 18px">${e.bullets.map(b=>`<li style="font-size:12.5px;margin:2px 0">${esc(b)}</li>`).join("")}</ul>`:""}</div>`;});}
+  if(cv.education.length){h+=sec("Education");cv.education.forEach(e=>{h+=`<div style="font-size:13px"><b>${esc([e.award,e.org].filter(Boolean).join(" — "))}</b>${e.dates?` <span style="color:#667">(${esc(e.dates)})</span>`:""}</div>`;});}
+  return h;
+}
+function cvTxt(cv){
+  const L=[cv.name.toUpperCase(),cv.contact,"=".repeat(50),"PROFILE",cv.summary,""];
+  if(cv.skills_matched.length)L.push("=".repeat(50),"KEY SKILLS FOR THIS ROLE",cv.skills_matched.join(", "),"");
+  if(cv.skills_other.length)L.push("=".repeat(50),"OTHER SKILLS",cv.skills_other.join(", "),"");
+  if(cv.experience.length){L.push("=".repeat(50),"EXPERIENCE");cv.experience.forEach(e=>{L.push([e.role,e.org].filter(Boolean).join(" — ")+(e.dates?` (${e.dates})`:""));(e.bullets||[]).forEach(b=>L.push("  • "+b));L.push("");});}
+  if(cv.education.length){L.push("=".repeat(50),"EDUCATION");cv.education.forEach(e=>L.push([e.award,e.org].filter(Boolean).join(" — ")+(e.dates?` (${e.dates})`:"")));}
+  return L.join("\n");
+}
+function cvDoc(cv){
+  const b=(e)=>(e.bullets||[]).map(x=>`<li>${esc(x)}</li>`).join("");
+  return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>body{font-family:Calibri,sans-serif;font-size:11pt}h1{font-size:18pt;margin:0;text-align:center}h2{font-size:12pt;color:#2b5cb8;border-bottom:1px solid #b8c4d8;margin:14pt 0 6pt}.c{text-align:center;color:#666;font-size:9.5pt}</style></head><body>
+<h1>${esc(cv.name)}</h1><div class="c">${esc(cv.contact)}</div>
+<h2>Profile</h2><p>${esc(cv.summary)}</p>
+${cv.skills_matched.length?`<h2>Key Skills for This Role</h2><p>${esc(cv.skills_matched.join(", "))}</p>`:""}
+${cv.skills_other.length?`<h2>Other Skills</h2><p>${esc(cv.skills_other.join(", "))}</p>`:""}
+${cv.experience.length?`<h2>Experience</h2>${cv.experience.map(e=>`<p style="margin:8pt 0 2pt"><b>${esc([e.role,e.org].filter(Boolean).join(" — "))}</b>${e.dates?` <span style="color:#666">(${esc(e.dates)})</span>`:""}</p>${(e.bullets||[]).length?`<ul>${b(e)}</ul>`:""}`).join("")}`:""}
+${cv.education.length?`<h2>Education</h2>${cv.education.map(e=>`<p style="margin:4pt 0"><b>${esc([e.award,e.org].filter(Boolean).join(" — "))}</b>${e.dates?` <span style="color:#666">(${esc(e.dates)})</span>`:""}</p>`).join("")}`:""}
+</body></html>`;
+}
+function dlText(txt,name){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([txt],{type:"text/plain"}));a.download=name;a.click();}
+function dlDoc(cv,name){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([cvDoc(cv)],{type:"application/msword"}));a.download=name;a.click();}
+/* ---------- CV studio UI ---------- */
+function loadCvTab(){
+  const p=STATE.profile;["name","headline","email","phone","location","why"].forEach(k=>{const el=$("#p_"+k);if(el)el.value=p[k]||"";});
+  renderMaster();
+  $("#matchJob").innerHTML='<option value="">— tracked job —</option>'+STATE.tracker.map(t=>{const j=jobById(t.job);return j?`<option value="${esc(j.id)}">${esc(j.title)} @ ${esc(j.company)}</option>`:"";}).join("");
+  renderVersions();
+}
+let MASTER=STATE.master;
+function renderMaster(){
+  MASTER=STATE.master;
+  $("#m_summary").value=MASTER.summary||"";$("#m_skills").value=MASTER.skills||"";$("#m_availability").value=MASTER.availability||"";
+  $("#expWrap").innerHTML='<label>Experience</label>'+(MASTER.experience||[]).map((e,i)=>`<div class="card" style="background:var(--panel2);padding:10px;margin-top:6px">
+    <div style="display:flex;gap:8px"><input type="text" placeholder="Role" value="${esc(e.role||"")}" onchange="MASTER.experience[${i}].role=this.value" style="flex:1">
+    <button class="btn ghost small" onclick="MASTER.experience.splice(${i},1);renderMaster()">✕</button></div>
+    <div class="mrow" style="margin-top:6px"><input type="text" placeholder="Company" value="${esc(e.org||"")}" onchange="MASTER.experience[${i}].org=this.value"><input type="text" placeholder="Dates" value="${esc(e.dates||"")}" onchange="MASTER.experience[${i}].dates=this.value"></div>
+    <textarea rows="2" placeholder="duties/achievements, one per line" onchange="MASTER.experience[${i}].bullets=this.value.split('\\n').filter(x=>x.trim())" style="margin-top:6px;font-size:13px">${(e.bullets||[]).join("\n")}</textarea></div>`).join("");
+  $("#eduWrap").innerHTML='<label>Education</label>'+(MASTER.education||[]).map((e,i)=>`<div class="mrow" style="margin-top:6px">
+    <input type="text" placeholder="Award" value="${esc(e.award||"")}" onchange="MASTER.education[${i}].award=this.value">
+    <input type="text" placeholder="School" value="${esc(e.org||"")}" onchange="MASTER.education[${i}].org=this.value">
+    <input type="text" placeholder="Dates" value="${esc(e.dates||"")}" onchange="MASTER.education[${i}].dates=this.value">
+    <button class="btn ghost small" onclick="MASTER.education.splice(${i},1);renderMaster()">✕</button></div>`).join("");
+  MASTER.summary=$("#m_summary").value;MASTER.skills=$("#m_skills").value;MASTER.availability=$("#m_availability").value;
+}
+function addExp(){collect();MASTER.experience.push({role:"",org:"",dates:"",bullets:[]});renderMaster();}
+function addEdu(){collect();MASTER.education.push({award:"",org:"",dates:""});renderMaster();}
+function collect(){MASTER.summary=$("#m_summary").value;MASTER.skills=$("#m_skills").value;MASTER.availability=$("#m_availability").value;}
+function saveMaster(msg){collect();STATE.master=MASTER;save();if(msg){$("#mSaved").textContent="Saved ✓";setTimeout(()=>$("#mSaved").textContent="",2000);}}
+function saveProfile(){["name","headline","email","phone","location","why"].forEach(k=>STATE.profile[k]=$("#p_"+k).value);save();$("#pSaved").textContent="Saved ✓";setTimeout(()=>$("#pSaved").textContent="",2000);}
+const DATE_RE=/((?:[A-Za-z]{3,9}\.?\s+)?(?:19|20)\d{2}\s*[-–—]+\s*(?:(?:[A-Za-z]{3,9}\.?\s+)?(?:19|20)\d{2}|present|current|now|date|ongoing)|(?:19|20)\d{2}\s*[-–—]+\s*(?:19|20)\d{2})/;
+function parseCV(raw){
+  const AL={experience:["work experience","employment","employment history","work history","professional experience","experience"],education:["education","qualifications","academic","training"],skills:["skills","key skills","core skills","technical skills","competencies"],summary:["profile","personal profile","summary","professional summary","personal statement","objective","about me"]};
+  const sec={head:[]};let cur="head";
+  raw.replace(/\r/g,"").split("\n").forEach(line=>{
+    const low=line.trim().toLowerCase().replace(/:$/,"");
+    let m=null;if(low&&low.length<40)for(const[s,al]of Object.entries(AL))if(al.includes(low)){m=s;break;}
+    if(m){cur=sec[m]=sec[m]||[];}else sec[cur].push(line);
+  });
+  const ne=k=>(sec[k]||[]).map(l=>l.trim()).filter(Boolean);
+  const out={summary:ne("summary").concat(cur==="head"?[]:[]).join(" ").slice(0,800)||ne("head").join(" ").slice(0,800),
+    skills:ne("skills").filter(l=>!/availab/i.test(l)).join(", "),availability:"",experience:[],education:[]};
+  (raw.match(/^.*availab.*$/im)||[""])[0]&&(out.availability=(raw.match(/^.*availab.*$/im)||[""])[0].trim().slice(0,160));
+  ne("experience").forEach(l=>{
+    if(/^[-•*·]\s*/.test(l)&&out.experience.length)out.experience[out.experience.length-1].bullets.push(l.replace(/^[-•*·]\s*/,""));
+    else{const m2=l.match(DATE_RE);const e={role:m2?l.replace(new RegExp("[,|]?\\s*"+m2[0].replace(/[.*+?^${}()|[\]\\]/g,"\\$&")),"","g").replace(/[ ,|]+$/,""):l,org:"",dates:m2?m2[0].trim():"",bullets:[]};out.experience.push(e);}
+  });
+  ne("education").forEach(l=>{
+    if(/^[-•*·]\s*/.test(l)&&out.education.length)out.education[out.education.length-1].award+=" — "+l.replace(/^[-•*·]\s*/,"");
+    else{const m2=l.match(DATE_RE);out.education.push({award:m2?l.replace(new RegExp("[,|]?\\s*"+m2[0].replace(/[.*+?^${}()|[\]\\]/g,"\\$&")),"","g").replace(/[ ,|]+$/,""):l,org:"",dates:m2?m2[0].trim():""});}
+  });
+  return out;
+}
+function importCV(){
+  const t=$("#importText").value;if(!t.trim()){alert("Paste your CV text first.");return;}
+  const p=parseCV(t);
+  MASTER=STATE.master={summary:p.summary||MASTER.summary,skills:p.skills||MASTER.skills,availability:p.availability||MASTER.availability,
+    experience:p.experience.length?p.experience:MASTER.experience,education:p.education.length?p.education:MASTER.education};
+  renderMaster();save();$("#importText").value="";$("#mSaved").textContent="Imported ✓ check sections";
+}
+function pickJob(){return $("#matchJob").value||SELECTED_JOB;}
+function runMatch(){
+  const j=jobById(pickJob());if(!j){alert("Pick a job first.");return;}
+  const cv=cvText();if(!cv){alert("Add your master CV first (paste + Import).");return;}
+  if(!j.desc){$("#matchOut").innerHTML='<div class="card" style="border-color:#5c1d2a">⚠️ Description not cached for this job yet — it will appear after the next Actions scan, or pick a newer job.</div>';return;}
+  const a=matchCv(cv,j.desc);showMatch(j,a);
+}
+function showMatch(j,a){
+  const col=a.score>=70?"var(--accent2)":a.score>=45?"var(--amber)":"var(--red)";
+  $("#matchOut").innerHTML=`<div class="card"><div style="display:flex;align-items:center;gap:12px"><div class="score" style="color:${col}">${a.score}%</div>
+  <div><b>${esc(j.title)}</b><br><span class="muted" style="font-size:12.5px">${esc(j.company)} — ${a.verdict}</span></div></div>
+  <label>✅ covered</label><div>${a.matched.map(k=>`<span class="kw good">${esc(k)}</span>`).join("")||'<span class="muted">none detected</span>'}</div>
+  <label>❗ missing (add only if true)</label><div>${a.missing.map(k=>`<span class="kw bad">${esc(k)}</span>`).join("")||'<span class="muted">all covered 🎉</span>'}</div></div>`;
+}
+function buildCV(){
+  const j=jobById(pickJob());if(!j){alert("Pick a job first.");return;}
+  saveProfile();saveMaster();
+  const cv=cvText();if(!cv){alert("Add your master CV first.");return;}
+  if(!j.desc){$("#cvOut").innerHTML='<div class="card" style="border-color:#5c1d2a">⚠️ Description not cached yet for this job.</div>';return;}
+  const a=matchCv(cv,j.desc);const tailored=tailorCv(STATE.profile,STATE.master,j,a);
+  const slug=(j.company+"-"+j.title).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,50);
+  const name=slug+"-"+new Date().toISOString().slice(0,10);
+  STATE.versions.unshift({id:Date.now(),name,job:j.id,cv:tailored});STATE.versions=STATE.versions.slice(0,30);
+  const tr=STATE.tracker.find(t=>t.job===j.id);if(tr)tr.cv_version=name;
+  save();showMatch(j,a);
+  $("#cvOut").innerHTML=`<div class="card" style="border-color:var(--accent)">
+   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+   <h3 style="flex:1">📄 ${esc(j.title)} <span class="badge new">${a.score}%</span></h3>
+   <button class="btn small" onclick="dlDoc(STATE.versions[0].cv,'cv-${esc(name)}.doc')">⬇ Word</button>
+   <button class="btn ghost small" onclick="dlText(cvTxt(STATE.versions[0].cv),'cv-${esc(name)}.txt')">⬇ txt</button></div>
+   ${tailored.suggestions.length?`<div style="margin-bottom:8px"><span class="muted" style="font-size:12.5px">💡 job also wants (add to master CV only if true):</span><br>${tailored.suggestions.map(k=>`<span class="kw bad">${esc(k)}</span>`).join("")}</div>`:""}
+   <div class="paper">${cvHtml(tailored)}</div>
+   <span class="muted" style="font-size:12px">Nothing invented — skills/experience re-ordered for this job. Proofread before sending!</span></div>`;
+  renderVersions();renderTracker();
+}
+function renderVersions(){
+  $("#versionsWrap").innerHTML=STATE.versions.length?`<label style="margin:8px 0 4px">Generated versions</label>`+STATE.versions.map((v,i)=>`<div style="display:flex;gap:8px;align-items:center;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--border)"><span style="flex:1">${esc(v.name)}</span>
+  <button class="btn ghost small" onclick="dlDoc(STATE.versions[${i}].cv,'cv-${esc(v.name)}.doc')">.doc</button>
+  <button class="btn ghost small" onclick="dlText(cvTxt(STATE.versions[${i}].cv),'cv-${esc(v.name)}.txt')">.txt</button></div>`).join(""):"";
+}
+function genLetter(){
+  const j=jobById(pickJob());if(!j){alert("Pick a job first.");return;}
+  saveProfile();saveMaster();
+  const p=STATE.profile,cv=cvText();
+  const a=j.desc&&cv?matchCv(cv,j.desc):{matched:[]};
+  const strengths=a.matched.slice(0,6).join(", ")||"relevant skills";
+  const today=new Date().toLocaleDateString("en-IE",{day:"2-digit",month:"long",year:"numeric"});
+  CURRENT_LETTER=`${p.name||"[Your Name]"}
+${p.phone||"[Phone]"} | ${p.email||"[Email]"}
+${p.location||"Cork, Ireland"}
+${today}
+
+Hiring Manager
+${j.company||"the Hiring Team"}
+${j.location||"Cork"}
+
+Re: Application for ${j.title}
+
+Dear Hiring Manager,
+
+I am writing to apply for the ${j.title} role at ${j.company||"your company"}, as advertised. ${p.years_exp?`With ${p.years_exp} years of experience in this area, t`:"T"}hroughout my work history I am confident I can contribute from day one — particularly through my experience with ${strengths}.
+
+What draws me to this role is the opportunity to join ${j.company||"your team"} in Cork and apply my skills where they will make a real difference. I am a reliable, motivated worker who enjoys being part of a team and taking ownership of my work.
+${p.why?p.why+"\n\n":""}I would welcome the opportunity to discuss how my background fits your needs. I am available for interview at your convenience and can be reached at ${p.phone||"[Phone]"} or ${p.email||"[Email]"}.
+
+Thank you for your time and consideration.
+
+Yours sincerely,
+${p.name||"[Your Name]"}`;
+  $("#letterWrap").classList.remove("hidden");$("#letterOut").textContent=CURRENT_LETTER;
+  $("#letterWrap").scrollIntoView({behavior:"smooth"});
+}
+function copyLetter(){navigator.clipboard.writeText(CURRENT_LETTER).then(()=>alert("Copied!"));}
+function gotoMatch(id){document.querySelector('#nav button[data-tab="cv"]').click();setTimeout(()=>{$("#matchJob").value=id;runMatch();},250);}
+let SELECTED_SEARCH="";
+$("#matchSearch").addEventListener("keydown",e=>{
+  if(e.key!=="Enter")return;
+  const q=e.target.value.toLowerCase();
+  const hits=JOBS.filter(j=>(j.title+" "+j.company).toLowerCase().includes(q)).slice(0,8);
+  const box=$("#matchSearchResults");SELECTED_JOB="";
+  box.innerHTML=hits.map(j=>`<div class="card pick" data-id="${esc(j.id)}" style="padding:8px 12px;margin-top:6px;cursor:pointer"><b style="font-size:13px">${esc(j.title)}</b><div class="muted" style="font-size:12px">${esc(j.company)} · ${esc(j.location)}</div></div>`).join("")||'<span class="muted" style="font-size:12px">no results</span>';
+  box.querySelectorAll(".pick").forEach(el=>el.onclick=()=>{box.querySelectorAll(".pick").forEach(c=>c.style.borderColor="var(--border)");el.style.borderColor="var(--accent)";SELECTED_JOB=el.dataset.id;$("#matchJob").value="";});
+});
+function backup(){dlText(JSON.stringify(STATE,null,1),"corkjobhunter-backup.json");}
+function restore(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(d.master&&d.tracker){STATE=d;save();location.reload();}else alert("Not a valid backup file.");}catch(e){alert("Could not read file.");}};r.readAsText(f);}
+$("#q").addEventListener("input",()=>{clearTimeout(window._qt);window._qt=setTimeout(renderJobs,250);});
+$("#newOnly").addEventListener("change",renderJobs);
+$("#corkOnly").addEventListener("change",renderJobs);
+loadJobs();
+</script>
+</body>
+</html>

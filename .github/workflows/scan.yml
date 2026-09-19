@@ -1,0 +1,32 @@
+name: scan-jobs
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"        # every 6 hours
+  workflow_dispatch: {}           # manual "Scan now" button in the Actions tab
+  push:
+    paths:
+      - ".github/workflows/scan.yml"
+      - "tools/**"
+      - "scraper.py"
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q requests beautifulsoup4 lxml
+      - run: python tools/scan_ci.py
+      - name: commit refreshed jobs.json
+        run: |
+          git config user.name "corkjobhunter-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/jobs.json
+          git diff --cached --quiet || git commit -m "chore: refresh jobs.json"
+          git push
