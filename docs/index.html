@@ -69,6 +69,11 @@ pre.letter{white-space:pre-wrap;background:var(--bg);border:1px solid var(--bord
 <main>
 <section id="tab-jobs">
   <div class="note">Jobs refresh automatically every ~6h via GitHub Actions (<a href="https://github.com/DaniloNocete/cork-job-seeker/actions" target="_blank">run now ↗</a> for an instant scan). Your CV &amp; tracker stay private in this browser only.</div>
+  <div class="toolbar" style="margin-bottom:8px">
+    <button id="sortNew" class="btn small" onclick="setSort('new')">🕒 Newest</button>
+    <button id="sortMatch" class="btn ghost small" onclick="setSort('match')">🎯 Best match</button>
+    <span id="sortHint" class="muted" style="font-size:12px"></span>
+  </div>
   <div class="toolbar">
     <input type="text" id="q" placeholder="Search title, company, location…" style="flex:1;min-width:160px">
     <label style="display:flex;align-items:center;gap:6px;margin:0"><input type="checkbox" id="newOnly" style="width:16px;height:16px"> New</label>
@@ -194,11 +199,36 @@ function renderJobs(){
   if($("#corkOnly").checked)jobs=jobs.filter(j=>!j.location||/cork/i.test(j.location));
   if($("#newOnly").checked){const c=Date.now()-48*3600*1000;jobs=jobs.filter(j=>new Date(j.first_seen).getTime()>=c);}
   if(q)jobs=jobs.filter(j=>(j.title+" "+j.company+" "+j.location).toLowerCase().includes(q));
+  let scores=null;
+  if(STATE.sort==="match"){
+    scores=computeScores();
+    if(!scores){$("#sortHint").textContent="← paste your CV in CV Studio first";jobs=jobs;}
+    else{$("#sortHint").textContent=jobs.filter(j=>scores[j.id]!=null).length+" jobs scored";jobs=[...jobs].sort((a,b)=>(scores[b.id]??-1)-(scores[a.id]??-1));}
+  } else $("#sortHint").textContent="";
+  updateSortBtns();
   $("#jobList").innerHTML=jobs.slice(0,200).map(j=>`<div class="card job"><div class="info">
-    <h3>${esc(j.title)} ${isNew(j)?'<span class="badge new">NEW</span>':""}</h3>
+    <h3>${esc(j.title)} ${isNew(j)?'<span class="badge new">NEW</span>':""}${scores&&scores[j.id]!=null?matchBadge(scores[j.id]):""}</h3>
     <div class="meta">${esc(j.company)} · ${esc(j.location)} · ${esc(j.posted||"?")}</div></div>
     <div class="acts"><a class="btn ghost small" href="${esc(j.url)}" target="_blank" rel="noopener">Open ↗</a>
     <button class="btn small" onclick="track('${esc(j.id)}',this)">☆</button></div></div>`).join("")||'<div class="card muted">No matches.</div>';
+}
+function matchBadge(s){
+  const col=s>=70?"#2dd4a7":s>=45?"#ffb454":"#ff8fa0";
+  return ` <span class="badge" style="background:#101828;color:${col};border:1px solid ${col}">${s}%</span>`;
+}
+let SCORES=null,SCORE_KEY="";
+function computeScores(){
+  const cv=cvText();if(!cv)return null;
+  const key=cv.length+":"+cv.slice(0,80);
+  if(SCORES&&SCORE_KEY===key)return SCORES;
+  SCORES={};JOBS.forEach(j=>{if(j.desc)SCORES[j.id]=matchCv(cv,j.desc).score;});
+  SCORE_KEY=key;return SCORES;
+}
+function setSort(s){STATE.sort=s;save();renderJobs();}
+function updateSortBtns(){
+  const m=STATE.sort==="match";
+  $("#sortNew").className=m?"btn ghost small":"btn small";
+  $("#sortMatch").className=m?"btn small":"btn ghost small";
 }
 const isNew=j=>new Date(j.first_seen).getTime()>=Date.now()-48*3600*1000;
 function track(id,btn){
