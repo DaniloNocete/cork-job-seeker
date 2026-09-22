@@ -13,7 +13,7 @@ OUT = os.path.join(ROOT, "docs", "jobs.json")
 
 LOCATION = os.environ.get("CJH_LOCATION", "Cork, County Cork, Ireland")
 SEARCHES = json.loads(os.environ.get("CJH_SEARCHES",
-    '["", "part time", "retail", "hospitality", "bar", "warehouse", "carpenter", "deckhand", "maritime", "gardening", "cruise", "seafarer"]'))
+    '["", "part time", "retail", "hospitality", "bar", "warehouse", "carpenter", "deckhand", "maritime", "gardening", "cruise", "seafarer", "cleaning", "kitchen porter", "apprentice", "trainee"]'))
 PART_TIME = os.environ.get("CJH_PART_TIME", "1") == "1"
 MAX_DESC_PER_RUN = 60
 KEEP_DAYS = 14
@@ -35,6 +35,8 @@ def main():
     for i, kw in enumerate(SEARCHES):
         pages = 15 if i == 0 else 5
         found += scraper.linkedin_search(kw, LOCATION, max_pages=pages, part_time=PART_TIME)
+    found += scraper.recruitireland_search()
+    found += scraper.cpl_search()
     print(f"listings found: {len(found)}")
 
     now = datetime.now().isoformat(timespec="seconds")
@@ -56,7 +58,7 @@ def main():
     missing = [jid for jid in new_ids if not jobs[jid]["desc"]][:MAX_DESC_PER_RUN]
     print(f"new: {len(new_ids)}, fetching {len(missing)} descriptions")
     for jid in missing:
-        desc = scraper.linkedin_description(jobs[jid]["url"])
+        desc = scraper.fetch_description(jobs[jid]["url"], jobs[jid]["source"])
         if desc:
             jobs[jid]["desc"] = desc[:8000]
         time.sleep(1.0)

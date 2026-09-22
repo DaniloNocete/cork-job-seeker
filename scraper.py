@@ -1,4 +1,5 @@
 """Job source scrapers: LinkedIn guest API + optional Adzuna API."""
+import datetime
 import re
 import time
 import requests
@@ -144,3 +145,102 @@ def adzuna_search(app_id: str, app_key: str, location: str = "Cork", what: str =
         except Exception:
             break
     return jobs
+
+
+# ---------- extra Irish sources ----------
+
+def recruitireland_search(location: str = "cork", max_pages: int = 2):
+    jobs, seen = [], set()
+    for page in range(1, max_pages + 1):
+        url = f"https://www.recruitireland.com/jobs/{location}" + (f"?page={page}" if page > 1 else "")
+        try:
+            r = requests.get(url, headers=UA, timeout=TIMEOUT)
+            if r.status_code != 200:
+                break
+        except requests.RequestException:
+            break
+        soup = BeautifulSoup(r.text, "lxml")
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            if "/job/" not in href or href in seen:
+                continue
+            title = _clean(a.get_text())
+            if not title or title.lower() in ("view job", "save job"):
+                continue
+            seen.add(href)
+            company = ""
+            m = re.search(r"/company/([^/]+)/job/", href)
+            if m:
+                company = m.group(1).replace("-", " ").title()
+            jobs.append({"source": "recruitireland", "ext_id": href.rstrip("/").split("/")[-1],
+                         "title": title, "company": company, "location": "Cork, Ireland",
+                         "posted": "", "url": href if href.startswith("http") else "https://www.recruitireland.com" + href})
+        if len(seen) == 0:
+            break
+        time.sleep(1.0)
+    return jobs
+
+
+def cpl_search(location: str = "cork", max_pages: int = 2):
+    """CPL Recruitment job boards (cpl.com). Titles in h3, date in p, salary via euros."""
+    towns = ("Cork", "Kinsale", "Mallow", "Midleton", "Cobh", "Youghal", "Bandon", "Clonakilty",
+             "Little Island", "Carrigaline", "Ringaskiddy", "Fermoy", "Rathcormac", "Blarney")
+    jobs, seen = [], set()
+    for page in range(1, max_pages + 1):
+        url = f"https://www.cpl.com/jobs/?location={location}" + (f"&paged={page}" if page > 1 else "")
+        try:
+            r = requests.get(url, headers=UA, timeout=TIMEOUT)
+            if r.status_code != 200:
+                break
+        except requests.RequestException:
+            break
+        soup = BeautifulSoup(r.text, "lxml")
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            if not re.search(r"/jobs/(JO-|\d)", href) or href in seen:
+                continue
+            h3 = a.find("h3")
+            if not h3:
+                continue
+            title = _clean(h3.get_text())
+            if not title:
+                continue
+            seen.add(href)
+            text = a.get_text(" ", strip=True)
+            posted = ""
+            m = re.search(r"Posted date\s*-\s*(\d{1,2} \w+ \d{4})", text)
+            if m:
+                try:
+                    posted = datetime.datetime.strptime(m.group(1), "%d %B %Y").strftime("%Y-%m-%d")
+                except ValueError:
+                    pass
+            sal = re.search(r"€[\d,]+(?:\s*-\s*€[\d,]+)?", text)
+            loc = "Cork, Ireland"
+            for t in towns:
+                if t.lower() in text.lower():
+                    loc = t + ", Ireland"
+                    break
+            jobs.append({"source": "cpl", "ext_id": href.rstrip("/").split("/")[-1],
+                         "title": title, "company": "CPL Recruitment", "location": loc,
+                         "posted": posted, "salary": sal.group(0) if sal else "",
+                         "url": "https://www.cpl.com" + href})
+        time.sleep(1.0)
+    return jobs
+
+
+def fetch_description(url: str, source: str):
+    """Generic description fetcher for non-LinkedIn sources."""
+    if source == "linkedin":
+        return linkedin_description(url)
+    try:
+        r = requests.get(url, headers=UA, timeout=TIMEOUT)
+        if r.status_code != 200:
+            return ""
+        soup = BeautifulSoup(r.text, "lxml")
+        for tag in soup(["script", "style", "nav", "footer", "header"]):
+            tag.decompose()
+        main = soup.find("article") or soup.find("main") or soup.find("body")
+        text = main.get_text("\n", strip=True) if main else ""
+        return re.sub(r"\n{3,}", "\n\n", text)[:12000]
+    except requests.RequestException:
+        return ""

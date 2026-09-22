@@ -140,6 +140,8 @@ def run_scan():
         for i, kw in enumerate(searches):
             pages = 15 if i == 0 else 5
             found += scraper.linkedin_search(kw, location, max_pages=pages, part_time=part_time)
+        found += scraper.recruitireland_search()
+        found += scraper.cpl_search()
         if az_id and az_key:
             loc = "Cork" if "cork" in location.lower() else location
             found += scraper.adzuna_search(az_id, az_key, location=loc)
@@ -324,13 +326,7 @@ def api_match():
     if not job:
         return jsonify({"error": "job not found"}), 404
     j = dict(job)
-    if not j.get("description"):
-        if j["source"] == "linkedin":
-            desc = scraper.linkedin_description(j["url"])
-            if desc:
-                d.execute("UPDATE jobs SET description=? WHERE id=?", (desc, j["id"]))
-                d.commit()
-                j["description"] = desc
+    j = _ensure_description(d, j)
     if not j.get("description"):
         return jsonify({"error": "Could not fetch the job description (site may be blocking). Try opening the job link directly."}), 422
     analysis = cvmatch.match(cv, j["description"])
@@ -347,8 +343,7 @@ def api_cover_letter():
     if not job:
         return jsonify({"error": "job not found"}), 404
     j = dict(job)
-    if not j.get("description") and j["source"] == "linkedin":
-        j["description"] = scraper.linkedin_description(j["url"]) or ""
+    j = _ensure_description(d, j)
     analysis = cvmatch.match(get_cv_text(d), j.get("description", "")) if j.get("description") else {"matched": []}
     letter = cvmatch.cover_letter(prof, j, analysis)
     return jsonify({"letter": letter})
@@ -358,8 +353,8 @@ def api_cover_letter():
 
 def _ensure_description(d, j):
     """Fetch & cache the full job description if missing. Returns updated dict."""
-    if not j.get("description") and j["source"] == "linkedin":
-        desc = scraper.linkedin_description(j["url"])
+    if not j.get("description"):
+        desc = scraper.fetch_description(j["url"], j["source"])
         if desc:
             d.execute("UPDATE jobs SET description=? WHERE id=?", (desc, j["id"]))
             d.commit()
