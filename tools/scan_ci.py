@@ -13,7 +13,7 @@ OUT = os.path.join(ROOT, "docs", "jobs.json")
 
 LOCATION = os.environ.get("CJH_LOCATION", "Cork, County Cork, Ireland")
 SEARCHES = json.loads(os.environ.get("CJH_SEARCHES",
-    '["", "part time", "retail", "hospitality", "bar", "warehouse"]'))
+    '["", "part time", "retail", "hospitality", "bar", "warehouse", "carpenter", "deckhand", "maritime", "gardening", "cruise", "seafarer"]'))
 PART_TIME = os.environ.get("CJH_PART_TIME", "1") == "1"
 MAX_DESC_PER_RUN = 60
 KEEP_DAYS = 14
