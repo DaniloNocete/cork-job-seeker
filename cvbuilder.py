@@ -6,7 +6,7 @@ from cvmatch import extract_terms, STOPWORDS
 
 # ---------- import: plain text -> structured draft ----------
 
-DATE_RANGE = (r"((?:[A-Za-z]{3,9}\.?\s+)?(?:19|20)\d{2}\s*[-–—]+\s*"
+DATE_RANGE = (r"((?:[A-Za-z]{3,9}\.?\s+)?(?:19|20)\d{2}\s*(?:[-–—]|\sto\s)\s*"
               r"(?:(?:[A-Za-z]{3,9}\.?\s+)?(?:19|20)\d{2}|present|current|now|date|ongoing)"
               r"|(?:19|20)\d{2}\s*[-–—]+\s*(?:19|20)\d{2})")
 

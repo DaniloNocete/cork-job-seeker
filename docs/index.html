@@ -374,7 +374,7 @@ function addEdu(){collect();MASTER.education.push({award:"",org:"",dates:""});re
 function collect(){MASTER.summary=$("#m_summary").value;MASTER.skills=$("#m_skills").value;MASTER.availability=$("#m_availability").value;}
 function saveMaster(msg){collect();STATE.master=MASTER;save();if(msg){$("#mSaved").textContent="Saved ✓";setTimeout(()=>$("#mSaved").textContent="",2000);}}
 function saveProfile(){["name","headline","email","phone","location","why"].forEach(k=>STATE.profile[k]=$("#p_"+k).value);save();$("#pSaved").textContent="Saved ✓";setTimeout(()=>$("#pSaved").textContent="",2000);}
-const DATE_RE=/((?:[A-Za-z]{3,9}\.?\s+)?(?:19|20)\d{2}\s*[-–—]+\s*(?:(?:[A-Za-z]{3,9}\.?\s+)?(?:19|20)\d{2}|present|current|now|date|ongoing)|(?:19|20)\d{2}\s*[-–—]+\s*(?:19|20)\d{2})/;
+const DATE_RE=/((?:[A-Za-z]{3,9}\.?\s+)?(?:19|20)\d{2}\s*(?:[-–—]|\sto\s)\s*(?:(?:[A-Za-z]{3,9}\.?\s+)?(?:19|20)\d{2}|present|current|now|date|ongoing)|(?:19|20)\d{2}\s*[-–—]+\s*(?:19|20)\d{2})/;
 function parseCV(raw){
   const AL={experience:["work experience","employment","employment history","work history","professional experience","experience"],education:["education","qualifications","academic","training"],skills:["skills","key skills","core skills","technical skills","competencies"],summary:["profile","personal profile","summary","professional summary","personal statement","objective","about me"]};
   const sec={head:[]};let cur="head";
