@@ -170,7 +170,7 @@ const KEY="cjh_state_v1";
 let STATE=load()||{profile:{},master:{summary:"",skills:"",availability:"",experience:[],education:[]},tracker:[],versions:[],cat:""};
 let JOBS=[],META={},CURRENT_LETTER="",SELECTED_JOB="";
 function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
-function save(){localStorage.setItem(KEY,JSON.stringify(STATE))}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(STATE))}catch(e){}}
 const $=s=>document.querySelector(s);
 const esc=s=>(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{
@@ -194,7 +194,12 @@ async function loadJobs(force){
   try{
     const r=await fetch("jobs.json"+(force?"?t="+Date.now():""),{cache:force?"no-store":"default"});
     const d=await r.json();META=d.meta||{};JOBS=d.jobs||[];
-  }catch(e){$("#jobList").innerHTML='<div class="card">No jobs.json yet — the first GitHub Action scan may still be running. Check the Actions tab, then hit ⟳.</div>';return;}
+  }catch(e){
+    const offline=!navigator.onLine||String(e).includes("Failed to fetch")||String(e).includes("NetworkError");
+    $("#jobList").innerHTML=offline
+      ?`<div class="card" style="border-color:var(--amber)"><b>📶 No internet in this window</b><br><span class="muted">This preview can't reach the job list. That's not a bug — just open the real app:<br><a href="https://danilonocete.github.io/cork-job-seeker/" target="_blank" style="color:var(--accent);font-weight:700">danilonocete.github.io/cork-job-seeker ↗</a></span></div>`
+      :'<div class="card">No jobs.json yet — the first GitHub Action scan may still be running. Check the Actions tab, then hit ⟳.</div>';
+    return;}
   renderStats();renderJobs();
 }
 const CATS=[["it","\u{1F4BB} IT"],["carpenter","\u{1F528} Carpenter"],["ship","\u{1F6A2} Ship crew"],["gardening","\u{1F33F} Gardening"],["kitchen","\u{1F373} Kitchen & cafe"],["cleaning","\u{1F9FD} Cleaning"],["retail","\u{1F6D2} Retail & sales"],["warehouse","\u{1F4E6} Warehouse"]];
