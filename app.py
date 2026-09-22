@@ -192,13 +192,44 @@ def index():
     return render_template("index.html")
 
 
+# ---------- job categories (filters) ----------
+CATEGORIES = [
+    ("it",        "\U0001F4BB IT",              r"\bit\b|it support|help ?desk|software|developer|programmer|devops|sysadmin|system admin|network|tech(nical)? support|front.?end|back.?end|full.?stack|data (analyst|engineer|scientist)|\bqa\b|tester|cyber|cloud|python|java|sql|computer|desktop support|infrastructure"),
+    ("carpenter", "\U0001F528 Carpenter",       r"carpent|joiner|joinery|woodwork|cabinet ?maker|shopfitt|furniture"),
+    ("ship",      "\U0001F6A2 Ship crew",       r"deckhand|deck hand|maritime|\bmarine\b|naval|seafarer|sailor|sea ?crew|offshore|ferry|vessel|yacht|fisher|fishing|dock|harbour|\bship\b|boat|marina|naval service"),
+    ("gardening", "\U0001F33F Gardening",       r"garden|landscap|grounds|horticult|greenkeep|tree surg|arborist|plant|nursery"),
+    ("kitchen",   "\U0001F373 Kitchen & cafe",  r"kitchen|porter|chef|cook|barista|waiter|waitress|commis|dishwash|caf|restaurant|food|baker"),
+    ("cleaning",  "\U0001F9FD Cleaning",        r"clean|housekeep|domestic|hygien|janitor|laundry"),
+    ("retail",    "\U0001F6D2 Retail & sales",  r"retail|sales|shop|store|assistant|cashier|merchandis|supermarket|stockroom"),
+    ("warehouse", "\U0001F4E6 Warehouse",       r"warehouse|picking|picker|packer|logistics|forklift|stores|distribution"),
+]
+CAT_RE = {slug: re.compile(pat, re.I) for slug, _, pat in CATEGORIES}
+
+
+def job_matches_cat(job, slug):
+    rx = CAT_RE.get(slug)
+    if not rx:
+        return True
+    return bool(rx.search(f"{job['title']} {job['company']} {job['location']}"))
+
+
+@app.route("/api/categories")
+def api_categories():
+    d = db()
+    rows = [dict(r) for r in d.execute("SELECT title, company, location FROM jobs").fetchall()]
+    return jsonify([{"slug": slug, "label": label,
+                     "count": sum(1 for j in rows if job_matches_cat(j, slug))}
+                    for slug, label, _ in CATEGORIES])
+
+
 @app.route("/api/jobs")
 def api_jobs():
     q = request.args.get("q", "").strip().lower()
     new_only = request.args.get("new_only") == "1"
     source = request.args.get("source", "")
+    cat = request.args.get("cat", "").strip()
     d = db()
-    rows = d.execute("SELECT * FROM jobs ORDER BY posted DESC, id DESC LIMIT 600").fetchall()
+    rows = d.execute("SELECT * FROM jobs ORDER BY posted DESC, id DESC LIMIT 3000").fetchall()
     cutoff = (date.today() - timedelta(days=2)).isoformat()
     out = []
     for r in rows:
@@ -207,6 +238,8 @@ def api_jobs():
         if q and q not in (j["title"] + " " + j["company"] + " " + j["location"]).lower():
             continue
         if source and j["source"] != source:
+            continue
+        if cat and not job_matches_cat(j, cat):
             continue
         if new_only and not j["is_new"]:
             continue

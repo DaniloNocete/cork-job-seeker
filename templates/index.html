@@ -101,6 +101,7 @@ pre.letter{white-space:pre-wrap;background:var(--bg);border:1px solid var(--bord
     <label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer"><input type="checkbox" id="corkOnly" checked> Cork area</label>
     <button class="btn ghost" id="scanBtn" onclick="scanNow()">⟳ Scan now</button>
   </div>
+  <div class="toolbar" id="catRow" style="margin-top:-6px"></div>
   <div id="jobList"><span class="muted">Loading…</span></div>
 </section>
 
@@ -231,10 +232,20 @@ async function loadStats(){
 }
 function timeAgo(iso){const m=(Date.now()-new Date(iso))/60000;if(m<60)return Math.round(m)+"m ago";const h=m/60;if(h<24)return Math.round(h)+"h ago";return Math.round(h/24)+"d ago";}
 
-let ALL_JOBS=[];
+let ALL_JOBS=[]; let CUR_CAT="";
+async function loadCats(){
+  try{
+    const cats=await api("/api/categories");
+    $("#catRow").innerHTML=cats.map(c=>
+      `<button class="btn ${c.slug===CUR_CAT?"":"ghost"} small" onclick="setCat('${c.slug}')">${c.label} <b style="opacity:.75">${c.count}</b></button>`
+    ).join("")+(CUR_CAT?`<button class="btn ghost small" onclick="setCat('')">✕ show all</button>`:"")
+     +`<span class="muted" style="font-size:11.5px;align-self:center">tap a category to filter</span>`;
+  }catch(e){}
+}
+function setCat(slug){ CUR_CAT=(CUR_CAT===slug)?"":slug; loadCats(); loadJobs(); }
 async function loadJobs(){
   const q=$("#q").value, no=$("#newOnly").checked;
-  let jobs=await api(`/api/jobs?q=${encodeURIComponent(q)}&new_only=${no?1:0}`);
+  let jobs=await api(`/api/jobs?q=${encodeURIComponent(q)}&new_only=${no?1:0}&cat=${CUR_CAT}`);
   if($("#corkOnly").checked)jobs=jobs.filter(j=>!j.location||/cork/i.test(j.location));
   ALL_JOBS=jobs;
   $("#jobList").innerHTML=jobs.length?jobs.map(jobCard).join(""):`<div class="card muted">No jobs match. Try clearing filters or hit “Scan now”.</div>`;
@@ -444,7 +455,7 @@ async function clearJobs(){await api("/api/jobs/clear",{method:"POST"});loadStat
 $("#q").addEventListener("input",()=>{clearTimeout(window._qt);window._qt=setTimeout(loadJobs,300);});
 $("#newOnly").addEventListener("change",loadJobs);
 $("#corkOnly").addEventListener("change",loadJobs);
-loadStats();loadJobs();setInterval(loadStats,15000);
+loadStats();loadCats();loadJobs();setInterval(loadStats,15000);
 </script>
 </body>
 </html>

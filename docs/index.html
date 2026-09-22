@@ -25,6 +25,9 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 .btn.ghost{background:var(--panel2);border:1px solid var(--border);color:var(--text)}
 .btn.green{background:var(--accent2);color:#08302a}
 .btn.small{padding:8px 12px;font-size:12.5px;border-radius:6px}
+.catbtn{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:999px;padding:7px 13px;font-size:12.5px;cursor:pointer;font-weight:600;white-space:nowrap}
+.catbtn b{color:var(--accent2);font-weight:700}
+.catbtn.on{background:var(--accent);border-color:var(--accent);color:#fff}.catbtn.on b{color:#fff}
 .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px}
 .job{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
 .job .info{flex:1;min-width:200px}
@@ -80,6 +83,7 @@ pre.letter{white-space:pre-wrap;background:var(--bg);border:1px solid var(--bord
     <label style="display:flex;align-items:center;gap:6px;margin:0"><input type="checkbox" id="corkOnly" checked style="width:16px;height:16px"> Cork</label>
     <button class="btn ghost small" onclick="loadJobs(true)">⟳</button>
   </div>
+  <div class="toolbar" id="catRow" style="margin-top:-6px;gap:6px"></div>
   <div id="jobList"><span class="muted">Loading jobs…</span></div>
 </section>
 
@@ -163,7 +167,7 @@ pre.letter{white-space:pre-wrap;background:var(--bg);border:1px solid var(--bord
 <script>
 "use strict";
 const KEY="cjh_state_v1";
-let STATE=load()||{profile:{},master:{summary:"",skills:"",availability:"",experience:[],education:[]},tracker:[],versions:[]};
+let STATE=load()||{profile:{},master:{summary:"",skills:"",availability:"",experience:[],education:[]},tracker:[],versions:[],cat:""};
 let JOBS=[],META={},CURRENT_LETTER="",SELECTED_JOB="";
 function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
 function save(){localStorage.setItem(KEY,JSON.stringify(STATE))}
@@ -193,12 +197,32 @@ async function loadJobs(force){
   }catch(e){$("#jobList").innerHTML='<div class="card">No jobs.json yet — the first GitHub Action scan may still be running. Check the Actions tab, then hit ⟳.</div>';return;}
   renderStats();renderJobs();
 }
+const CATS=[["it","\u{1F4BB} IT"],["carpenter","\u{1F528} Carpenter"],["ship","\u{1F6A2} Ship crew"],["gardening","\u{1F33F} Gardening"],["kitchen","\u{1F373} Kitchen & cafe"],["cleaning","\u{1F9FD} Cleaning"],["retail","\u{1F6D2} Retail & sales"],["warehouse","\u{1F4E6} Warehouse"]];
+const CAT_RE={
+ it:/\bit\b|it support|help ?desk|software|developer|programmer|devops|sysadmin|system admin|network|tech(nical)? support|front.?end|back.?end|full.?stack|data (analyst|engineer|scientist)|\bqa\b|tester|cyber|cloud|python|java|sql|computer|desktop support|infrastructure/i,
+ carpenter:/carpent|joiner|joinery|woodwork|cabinet ?maker|shopfitt|furniture/i,
+ ship:/deckhand|deck hand|maritime|\bmarine\b|naval|seafarer|sailor|sea ?crew|offshore|ferry|vessel|yacht|fisher|fishing|dock|harbour|\bship\b|boat|marina|naval service/i,
+ gardening:/garden|landscap|grounds|horticult|greenkeep|tree surg|arborist|plant|nursery/i,
+ kitchen:/kitchen|porter|chef|cook|barista|waiter|waitress|commis|dishwash|caf|restaurant|food|baker/i,
+ cleaning:/clean|housekeep|domestic|hygien|janitor|laundry/i,
+ retail:/retail|sales|shop|store|assistant|cashier|merchandis|supermarket|stockroom/i,
+ warehouse:/warehouse|picking|picker|packer|logistics|forklift|stores|distribution/i};
+function catText(j){return (j.title+" "+(j.company||"")+" "+(j.location||""));}
+function setCat(slug){STATE.cat=(STATE.cat===slug)?"":slug;save();renderJobs();}
+function renderCats(jobs){
+  const counts={};CATS.forEach(([s])=>counts[s]=jobs.filter(j=>CAT_RE[s].test(catText(j))).length);
+  $("#catRow").innerHTML=CATS.map(([s,label])=>
+    `<button class="catbtn ${STATE.cat===s?"on":""}" onclick="setCat('${s}')">${label} <b>${counts[s]}</b></button>`
+  ).join("")+(STATE.cat?`<button class="catbtn" onclick="setCat('')">✕ show all</button>`:"");
+}
 function renderJobs(){
   const q=$("#q").value.toLowerCase();
   let jobs=JOBS;
   if($("#corkOnly").checked)jobs=jobs.filter(j=>!j.location||/cork/i.test(j.location));
   if($("#newOnly").checked){const c=Date.now()-48*3600*1000;jobs=jobs.filter(j=>new Date(j.first_seen).getTime()>=c);}
   if(q)jobs=jobs.filter(j=>(j.title+" "+j.company+" "+j.location).toLowerCase().includes(q));
+  renderCats(jobs);
+  if(STATE.cat)jobs=jobs.filter(j=>CAT_RE[STATE.cat].test(catText(j)));
   let scores=null;
   if(STATE.sort==="match"){
     scores=computeScores();
