@@ -52,6 +52,27 @@ docker run -d --restart unless-stopped -p 8000:8000 \
   -e AUTH_PASSWORD=change-me -v jobhunter-data:/app/data corkjobhunter
 ```
 
+## Job sources (what this searches)
+
+**Working automatically (no setup needed):**
+
+| Source | Notes |
+|---|---|
+| LinkedIn Jobs (Cork) | main source, public cards, no login |
+| RecruitIreland.com | Irish board, Cork listings |
+| CPL Recruitment (cpl.com) | Irish agency; salaries shown when listed |
+
+**Blocked to robots (browsers work fine, servers do not):**
+jobs.ie and irishjobs.ie (same company, StepStone, block datacenter IPs),
+Indeed.ie, Gumtree.ie, Adverts.ie, JobsIreland.ie (unreliable), HospitalityJobsIreland.com.
+These cannot be scanned by the bot - use your phone/browser for them, or use the Adzuna route below.
+
+**Adzuna (optional, gets "everything at once"):**
+Adzuna is an aggregator that includes jobs.ie, irishjobs.ie and many more in a single feed.
+1. Free signup at developer.adzuna.com (2 minutes, gives app_id + app_key)
+2. Paste both into Settings in the dashboard and save
+3. The scanner then also pulls those aggregated listings automatically
+
 ## Notes & limitations
 
 - Applications are **never auto-submitted** — job sites ban bots and spray-and-pray
