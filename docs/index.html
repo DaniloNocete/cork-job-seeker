@@ -321,16 +321,16 @@ function cvHtml(cv){
   h+=sec("Profile")+`<p style="font-size:13px">${esc(cv.summary)}</p>`;
   if(cv.skills_matched.length)h+=sec("Key skills for this role")+cv.skills_matched.map(s=>`<span class="kw good">${esc(s)}</span>`).join("");
   if(cv.skills_other.length)h+=sec("Other skills")+cv.skills_other.map(s=>`<span class="kw">${esc(s)}</span>`).join("");
-  if(cv.experience.length){h+=sec("Experience");cv.experience.forEach(e=>{h+=`<div style="margin-bottom:8px"><b style="font-size:13px">${esc([e.role,e.org].filter(Boolean).join(" — "))}</b>${e.dates?` <span style="color:#667">(${esc(e.dates)})</span>`:""}${(e.bullets||[]).length?`<ul style="margin:4px 0 0 18px">${e.bullets.map(b=>`<li style="font-size:12.5px;margin:2px 0">${esc(b)}</li>`).join("")}</ul>`:""}</div>`;});}
-  if(cv.education.length){h+=sec("Education");cv.education.forEach(e=>{h+=`<div style="font-size:13px"><b>${esc([e.award,e.org].filter(Boolean).join(" — "))}</b>${e.dates?` <span style="color:#667">(${esc(e.dates)})</span>`:""}</div>`;});}
+  if(cv.experience.length){h+=sec("Experience");cv.experience.forEach(e=>{h+=`<div style="margin-bottom:8px"><b style="font-size:13px">${esc([e.role,e.org].filter(Boolean).join(" | "))}</b>${e.dates?` <span style="color:#667">(${esc(e.dates)})</span>`:""}${(e.bullets||[]).length?`<ul style="margin:4px 0 0 18px">${e.bullets.map(b=>`<li style="font-size:12.5px;margin:2px 0">${esc(b)}</li>`).join("")}</ul>`:""}</div>`;});}
+  if(cv.education.length){h+=sec("Education");cv.education.forEach(e=>{h+=`<div style="font-size:13px"><b>${esc([e.award,e.org].filter(Boolean).join(" | "))}</b>${e.dates?` <span style="color:#667">(${esc(e.dates)})</span>`:""}</div>`;});}
   return h;
 }
 function cvTxt(cv){
   const L=[cv.name.toUpperCase(),cv.contact,"=".repeat(50),"PROFILE",cv.summary,""];
   if(cv.skills_matched.length)L.push("=".repeat(50),"KEY SKILLS FOR THIS ROLE",cv.skills_matched.join(", "),"");
   if(cv.skills_other.length)L.push("=".repeat(50),"OTHER SKILLS",cv.skills_other.join(", "),"");
-  if(cv.experience.length){L.push("=".repeat(50),"EXPERIENCE");cv.experience.forEach(e=>{L.push([e.role,e.org].filter(Boolean).join(" — ")+(e.dates?` (${e.dates})`:""));(e.bullets||[]).forEach(b=>L.push("  • "+b));L.push("");});}
-  if(cv.education.length){L.push("=".repeat(50),"EDUCATION");cv.education.forEach(e=>L.push([e.award,e.org].filter(Boolean).join(" — ")+(e.dates?` (${e.dates})`:"")));}
+  if(cv.experience.length){L.push("=".repeat(50),"EXPERIENCE");cv.experience.forEach(e=>{L.push([e.role,e.org].filter(Boolean).join(" | ")+(e.dates?` (${e.dates})`:""));(e.bullets||[]).forEach(b=>L.push("  • "+b));L.push("");});}
+  if(cv.education.length){L.push("=".repeat(50),"EDUCATION");cv.education.forEach(e=>L.push([e.award,e.org].filter(Boolean).join(" | ")+(e.dates?` (${e.dates})`:"")));}
   return L.join("\n");
 }
 function cvDoc(cv){
@@ -340,8 +340,8 @@ function cvDoc(cv){
 <h2>Profile</h2><p>${esc(cv.summary)}</p>
 ${cv.skills_matched.length?`<h2>Key Skills for This Role</h2><p>${esc(cv.skills_matched.join(", "))}</p>`:""}
 ${cv.skills_other.length?`<h2>Other Skills</h2><p>${esc(cv.skills_other.join(", "))}</p>`:""}
-${cv.experience.length?`<h2>Experience</h2>${cv.experience.map(e=>`<p style="margin:8pt 0 2pt"><b>${esc([e.role,e.org].filter(Boolean).join(" — "))}</b>${e.dates?` <span style="color:#666">(${esc(e.dates)})</span>`:""}</p>${(e.bullets||[]).length?`<ul>${b(e)}</ul>`:""}`).join("")}`:""}
-${cv.education.length?`<h2>Education</h2>${cv.education.map(e=>`<p style="margin:4pt 0"><b>${esc([e.award,e.org].filter(Boolean).join(" — "))}</b>${e.dates?` <span style="color:#666">(${esc(e.dates)})</span>`:""}</p>`).join("")}`:""}
+${cv.experience.length?`<h2>Experience</h2>${cv.experience.map(e=>`<p style="margin:8pt 0 2pt"><b>${esc([e.role,e.org].filter(Boolean).join(" | "))}</b>${e.dates?` <span style="color:#666">(${esc(e.dates)})</span>`:""}</p>${(e.bullets||[]).length?`<ul>${b(e)}</ul>`:""}`).join("")}`:""}
+${cv.education.length?`<h2>Education</h2>${cv.education.map(e=>`<p style="margin:4pt 0"><b>${esc([e.award,e.org].filter(Boolean).join(" | "))}</b>${e.dates?` <span style="color:#666">(${esc(e.dates)})</span>`:""}</p>`).join("")}`:""}
 </body></html>`;
 }
 function dlText(txt,name){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([txt],{type:"text/plain"}));a.download=name;a.click();}
@@ -392,7 +392,7 @@ function parseCV(raw){
     else{const m2=l.match(DATE_RE);const e={role:m2?l.replace(new RegExp("[,|]?\\s*"+m2[0].replace(/[.*+?^${}()|[\]\\]/g,"\\$&")),"","g").replace(/[ ,|]+$/,""):l,org:"",dates:m2?m2[0].trim():"",bullets:[]};out.experience.push(e);}
   });
   ne("education").forEach(l=>{
-    if(/^[-•*·]\s*/.test(l)&&out.education.length)out.education[out.education.length-1].award+=" — "+l.replace(/^[-•*·]\s*/,"");
+    if(/^[-•*·]\s*/.test(l)&&out.education.length)out.education[out.education.length-1].award+=" | "+l.replace(/^[-•*·]\s*/,"");
     else{const m2=l.match(DATE_RE);out.education.push({award:m2?l.replace(new RegExp("[,|]?\\s*"+m2[0].replace(/[.*+?^${}()|[\]\\]/g,"\\$&")),"","g").replace(/[ ,|]+$/,""):l,org:"",dates:m2?m2[0].trim():""});}
   });
   return out;

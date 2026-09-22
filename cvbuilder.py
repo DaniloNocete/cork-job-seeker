@@ -12,7 +12,8 @@ DATE_RANGE = (r"((?:[A-Za-z]{3,9}\.?\s+)?(?:19|20)\d{2}\s*(?:[-–—]|\sto\s)\s
 
 SECTION_ALIASES = {
     "experience": ["work experience", "employment", "employment history", "work history",
-                   "professional experience", "experience"],
+                   "professional experience", "experience", "additional experience", "other experience",
+                   "hospitality experience"],
     "education": ["education", "qualifications", "academic", "training"],
     "skills": ["skills", "key skills", "core skills", "technical skills", "competencies"],
     "summary": ["profile", "personal profile", "summary", "professional summary",
@@ -81,7 +82,7 @@ def parse_cv_text(raw):
     edu, cur = [], None
     for l in nonempty(sections.get("education", [])):
         if re.match(r"^[-•*·]\s*", l) and cur:
-            cur["award"] += " — " + re.sub(r"^[-•*·]\s*", "", l)
+            cur["award"] += " | " + re.sub(r"^[-•*·]\s*", "", l)
         else:
             cur = {"award": l, "org": "", "dates": ""}
             m = re.search(DATE_RANGE, l, re.I)
@@ -174,7 +175,7 @@ def render_txt(cv):
     if cv["experience"]:
         L += [bar, "EXPERIENCE"]
         for e in cv["experience"]:
-            head = " — ".join(x for x in [e.get("role"), e.get("org")] if x)
+            head = " | ".join(x for x in [e.get("role"), e.get("org")] if x)
             dates = f" ({e['dates']})" if e.get("dates") else ""
             L.append(f"{head}{dates}")
             L += [f"  • {b}" for b in e.get("bullets", [])]
@@ -182,7 +183,7 @@ def render_txt(cv):
     if cv["education"]:
         L += [bar, "EDUCATION"]
         for e in cv["education"]:
-            head = " — ".join(x for x in [e.get("award"), e.get("org")] if x)
+            head = " | ".join(x for x in [e.get("award"), e.get("org")] if x)
             dates = f" ({e['dates']})" if e.get("dates") else ""
             L.append(f"{head}{dates}")
         L.append("")
@@ -205,7 +206,7 @@ def render_html(cv):
     if cv["experience"]:
         parts.append(sec("Experience"))
         for e in cv["experience"]:
-            head = " — ".join(esc(x) for x in [e.get("role"), e.get("org")] if x)
+            head = " | ".join(esc(x) for x in [e.get("role"), e.get("org")] if x)
             dates = f" <span style='color:#93a0b8'>({esc(e.get('dates',''))})</span>" if e.get("dates") else ""
             bl = "".join(f"<li style='font-size:13px;margin:2px 0'>{esc(b)}</li>" for b in e.get("bullets", []))
             parts.append(f"<div style='margin-bottom:8px'><b style='font-size:13.5px'>{head}</b>{dates}"
@@ -213,7 +214,7 @@ def render_html(cv):
     if cv["education"]:
         parts.append(sec("Education"))
         for e in cv["education"]:
-            head = " — ".join(esc(x) for x in [e.get("award"), e.get("org")] if x)
+            head = " | ".join(esc(x) for x in [e.get("award"), e.get("org")] if x)
             dates = f" <span style='color:#93a0b8'>({esc(e.get('dates',''))})</span>" if e.get("dates") else ""
             parts.append(f"<div style='font-size:13.5px'><b>{head}</b>{dates}</div>")
     return "".join(parts)
@@ -272,7 +273,7 @@ def render_docx(cv, path):
         heading("Experience")
         for e in cv["experience"]:
             p = doc.add_paragraph()
-            run = p.add_run(" — ".join(x for x in [e.get("role"), e.get("org")] if x))
+            run = p.add_run(" | ".join(x for x in [e.get("role"), e.get("org")] if x))
             run.bold = True
             if e.get("dates"):
                 dr = p.add_run(f"  ({e['dates']})")
@@ -285,7 +286,7 @@ def render_docx(cv, path):
         heading("Education")
         for e in cv["education"]:
             p = doc.add_paragraph()
-            run = p.add_run(" — ".join(x for x in [e.get("award"), e.get("org")] if x))
+            run = p.add_run(" | ".join(x for x in [e.get("award"), e.get("org")] if x))
             run.bold = True
             if e.get("dates"):
                 dr = p.add_run(f"  ({e['dates']})")
