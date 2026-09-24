@@ -1,4 +1,4 @@
-"""CorkJobHunter — auto job scanning, tracker and CV assistant for Cork."""
+"""Cork Job Seeker — auto job scanning, tracker and CV assistant for Cork."""
 import json
 import os
 import re
@@ -30,7 +30,7 @@ def require_auth():
     auth = request.authorization
     if not auth or auth.password != AUTH_PASSWORD:
         return Response("Authentication required.", 401,
-                        {"WWW-Authenticate": 'Basic realm="CorkJobHunter"'})
+                        {"WWW-Authenticate": 'Basic realm="Cork Job Seeker"'})
 
 
 def db():

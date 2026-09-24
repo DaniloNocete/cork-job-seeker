@@ -1,4 +1,4 @@
-# 🎯 CorkJobHunter
+# 🎯 Cork Job Seeker
 
 **📲 LIVE APP → https://danilonocete.github.io/cork-job-seeker/**
 *(open on your phone → Share/⋮ menu → “Add to Home Screen” to use it like an app)*
