@@ -67,7 +67,10 @@ def main():
     cutoff = (date.today() - timedelta(days=KEEP_DAYS)).isoformat()
     keep = [j for j in jobs.values()
             if (j.get("posted") or "9999") >= cutoff or (j.get("first_seen") or "")[:10] >= cutoff]
-    keep.sort(key=lambda j: j.get("posted") or "", reverse=True)
+    # sort by freshest signal: posted date, falling back to when WE first saw it
+    # (some sources, e.g. RecruitIreland, publish no date - they must not sink to the bottom)
+    keep.sort(key=lambda j: (j.get("posted") or (j.get("first_seen") or "")[:10] or "0000-00-00"),
+              reverse=True)
     keep = keep[:MAX_JOBS]
 
     os.makedirs(os.path.dirname(OUT), exist_ok=True)

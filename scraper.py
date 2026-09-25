@@ -149,7 +149,24 @@ def adzuna_search(app_id: str, app_key: str, location: str = "Cork", what: str =
 
 # ---------- extra Irish sources ----------
 
+IRE_COUNTIES = ["carlow","cavan","clare","cork","donegal","dublin","galway","kerry","kildare",
+                "kilkenny","laois","leitrim","limerick","longford","louth","mayo","meath",
+                "monaghan","offaly","roscommon","sligo","tipperary","waterford","westmeath",
+                "wexford","wicklow"]
+
+
+def _county_from_text(text: str):
+    """Return the Irish county named in the text, or '' if none."""
+    low = text.lower()
+    for c in IRE_COUNTIES:
+        if re.search(r"(county|co\.)\s+" + c + r"\b", low) or re.search(r"\b" + c + r"\b", low):
+            return c
+    return ""
+
+
 def recruitireland_search(location: str = "cork", max_pages: int = 2):
+    """RecruitIreland. Their /jobs/cork page also carries national jobs, so every
+    listing is checked and non-Cork ones are dropped (this is a Cork-only app)."""
     jobs, seen = [], set()
     for page in range(1, max_pages + 1):
         url = f"https://www.recruitireland.com/jobs/{location}" + (f"?page={page}" if page > 1 else "")
@@ -168,14 +185,29 @@ def recruitireland_search(location: str = "cork", max_pages: int = 2):
             if not title or title.lower() in ("view job", "save job"):
                 continue
             seen.add(href)
+            full_url = href if href.startswith("http") else "https://www.recruitireland.com" + href
+            # decide the real county: from the title, else from the job page itself
+            county = _county_from_text(title)
+            if not county:
+                try:
+                    det = requests.get(full_url, headers=UA, timeout=TIMEOUT)
+                    if det.status_code == 200:
+                        dsoup = BeautifulSoup(det.text, "lxml")
+                        # location is usually in the first part of the page - search it
+                        county = _county_from_text(dsoup.get_text(" ", strip=True)[:2500])
+                    time.sleep(0.6)
+                except requests.RequestException:
+                    county = "cork"  # page unreadable: trust the /cork section rather than drop
+            if county and county != "cork":
+                continue  # not a Cork job - skip it entirely
             company = ""
             m = re.search(r"/company/([^/]+)/job/", href)
             if m:
                 company = m.group(1).replace("-", " ").title()
             jobs.append({"source": "recruitireland", "ext_id": href.rstrip("/").split("/")[-1],
                          "title": title, "company": company, "location": "Cork, Ireland",
-                         "posted": "", "url": href if href.startswith("http") else "https://www.recruitireland.com" + href})
-        if len(seen) == 0:
+                         "posted": "", "url": full_url})
+        if not seen:
             break
         time.sleep(1.0)
     return jobs
