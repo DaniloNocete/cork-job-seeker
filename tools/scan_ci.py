@@ -7,6 +7,8 @@ from datetime import datetime, date, timedelta
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import scraper  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import filters  # noqa: E402
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 OUT = os.path.join(ROOT, "docs", "jobs.json")
@@ -18,6 +20,8 @@ PART_TIME = os.environ.get("CJH_PART_TIME", "1") == "1"
 MAX_DESC_PER_RUN = 60
 KEEP_DAYS = 14
 MAX_JOBS = 800
+FILTER = os.environ.get("CJH_FILTER", "1") == "1"
+REQUIRE_CORK = os.environ.get("CJH_REQUIRE_CORK", "1") == "1"
 
 
 def load_existing():
@@ -42,6 +46,13 @@ def main():
     now = datetime.now().isoformat(timespec="seconds")
     jobs = dict(old)
     new_ids = []
+    before = len(found)
+    if FILTER:
+        if not REQUIRE_CORK:
+            filters.is_cork = lambda job: True  # keep off-county jobs but still block titles
+        found = [j for j in found if filters.keep_job(j)]
+        print(f"filter: dropped {before - len(found)} of {before} listings (wrong county / profession / level)")
+
     for j in found:
         jid = f"{j['source']}:{j['ext_id']}"
         if jid in jobs:
@@ -67,6 +78,12 @@ def main():
     cutoff = (date.today() - timedelta(days=KEEP_DAYS)).isoformat()
     keep = [j for j in jobs.values()
             if (j.get("posted") or "9999") >= cutoff or (j.get("first_seen") or "")[:10] >= cutoff]
+    if FILTER:
+        stale = len(keep)
+        keep = [j for j in keep if filters.keep_job(j)]
+        print(f"filter: removed {stale - len(keep)} previously stored jobs (wrong county / profession / level)")
+    for j in keep:
+        j["student"] = filters.is_student_friendly(j)
     # sort by freshest signal: posted date, falling back to when WE first saw it
     # (some sources, e.g. RecruitIreland, publish no date - they must not sink to the bottom)
     keep.sort(key=lambda j: (j.get("posted") or (j.get("first_seen") or "")[:10] or "0000-00-00"),
@@ -75,7 +92,9 @@ def main():
 
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     payload = {"meta": {"generated": now, "count": len(keep),
-                        "location": LOCATION, "part_time": PART_TIME},
+                        "location": LOCATION, "part_time": PART_TIME,
+                        "student_friendly": sum(1 for j in keep if j.get("student")),
+                        "filtered": FILTER},
                "jobs": keep}
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
