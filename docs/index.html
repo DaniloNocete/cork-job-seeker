@@ -202,7 +202,7 @@ async function loadJobs(force){
     return;}
   renderStats();renderJobs();
 }
-const CATS=[["it","\u{1F4BB} IT"],["carpenter","\u{1F528} Carpenter"],["ship","\u{1F6A2} Ship crew"],["gardening","\u{1F33F} Gardening"],["kitchen","\u{1F373} Kitchen & cafe"],["cleaning","\u{1F9FD} Cleaning"],["retail","\u{1F6D2} Retail & sales"],["warehouse","\u{1F4E6} Warehouse"]];
+const CATS=[["student","\u{1F393} Part-time & student"],["it","\u{1F4BB} IT"],["carpenter","\u{1F528} Carpenter"],["ship","\u{1F6A2} Ship crew"],["gardening","\u{1F33F} Gardening"],["kitchen","\u{1F373} Kitchen & cafe"],["cleaning","\u{1F9FD} Cleaning"],["retail","\u{1F6D2} Retail & sales"],["warehouse","\u{1F4E6} Warehouse"]];
 const CAT_RE={
  it:/\bit\b|it support|help ?desk|software|developer|programmer|devops|sysadmin|system admin|network|tech(nical)? support|front.?end|back.?end|full.?stack|data (analyst|engineer|scientist)|\bqa\b|tester|cyber|cloud|python|java|sql|computer|desktop support|infrastructure/i,
  carpenter:/carpent|joiner|joinery|woodwork|cabinet ?maker|shopfitt|furniture/i,
@@ -215,7 +215,7 @@ const CAT_RE={
 function catText(j){return (j.title+" "+(j.company||"")+" "+(j.location||""));}
 function setCat(slug){STATE.cat=(STATE.cat===slug)?"":slug;save();renderJobs();}
 function renderCats(jobs){
-  const counts={};CATS.forEach(([s])=>counts[s]=jobs.filter(j=>CAT_RE[s].test(catText(j))).length);
+  const counts={};CATS.forEach(([s])=>counts[s]=(s==="student")?jobs.filter(j=>j.student).length:jobs.filter(j=>CAT_RE[s].test(catText(j))).length);
   $("#catRow").innerHTML=CATS.map(([s,label])=>
     `<button class="catbtn ${STATE.cat===s?"on":""}" onclick="setCat('${s}')">${label} <b>${counts[s]}</b></button>`
   ).join("")+(STATE.cat?`<button class="catbtn" onclick="setCat('')">✕ show all</button>`:"");
@@ -227,7 +227,7 @@ function renderJobs(){
   if($("#newOnly").checked){const c=Date.now()-48*3600*1000;jobs=jobs.filter(j=>new Date(j.first_seen).getTime()>=c);}
   if(q)jobs=jobs.filter(j=>(j.title+" "+j.company+" "+j.location).toLowerCase().includes(q));
   renderCats(jobs);
-  if(STATE.cat)jobs=jobs.filter(j=>CAT_RE[STATE.cat].test(catText(j)));
+  if(STATE.cat)jobs=(STATE.cat==="student")?jobs.filter(j=>j.student):jobs.filter(j=>CAT_RE[STATE.cat].test(catText(j)));
   let scores=null;
   if(STATE.sort==="match"){
     scores=computeScores();
